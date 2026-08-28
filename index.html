@@ -449,9 +449,86 @@
     margin-top:18px;
     font-family:'IBM Plex Mono',monospace;
   }
+
+  #lockScreen{
+    position:fixed;
+    inset:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 15% 0%, #24374a 0%, transparent 45%),
+      radial-gradient(circle at 100% 100%, #223244 0%, transparent 40%);
+    z-index:9999;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+  }
+  #lockScreen.hidden{ display:none; }
+  .lock-card{
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:16px;
+    padding:28px 22px;
+    max-width:320px;
+    width:100%;
+    text-align:center;
+  }
+  .lock-card .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin-bottom:8px;
+  }
+  .lock-card h2{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:22px;
+    margin:0 0 18px 0;
+    color:var(--ink);
+  }
+  .lock-card input[type=password]{
+    width:100%;
+    text-align:center;
+    letter-spacing:.3em;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:18px;
+    padding:12px;
+    border-radius:9px;
+    border:1px solid var(--paper-line);
+    background:var(--paper);
+    margin-bottom:12px;
+  }
+  .lock-card button{
+    width:100%;
+    background:var(--ink);
+    color:var(--gold-soft);
+    border:none;
+    border-radius:9px;
+    padding:12px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .lock-card .err{
+    color:var(--rust);
+    font-size:12px;
+    margin-top:10px;
+    min-height:16px;
+  }
 </style>
 </head>
 <body>
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="eyebrow">Himoyalangan</div>
+    <h2>Kirish uchun parol</h2>
+    <input type="password" id="lockInput" inputmode="numeric" maxlength="12" placeholder="••••">
+    <button id="lockBtn">Kirish</button>
+    <div class="err" id="lockErr"></div>
+  </div>
+</div>
 <div class="wrap">
   <header class="hero">
     <div class="eyebrow">O'quv reyestri</div>
@@ -925,6 +1002,37 @@ document.getElementById('addStudentBtn').onclick = ()=>{
 };
 
 loadData();
+
+// ---- Simple password lock ----
+const APP_PASSWORD = '0919';
+const UNLOCK_KEY = 'tutoring-tracker-unlocked';
+
+function tryUnlock(){
+  const input = document.getElementById('lockInput');
+  const err = document.getElementById('lockErr');
+  if(input.value === APP_PASSWORD){
+    try{ localStorage.setItem(UNLOCK_KEY, 'true'); }catch(e){ /* ignore */ }
+    document.getElementById('lockScreen').classList.add('hidden');
+  } else {
+    err.textContent = 'Parol noto\'g\'ri, qayta urinib ko\'ring.';
+    input.value = '';
+    input.focus();
+  }
+}
+
+(function initLock(){
+  let alreadyUnlocked = false;
+  try{ alreadyUnlocked = localStorage.getItem(UNLOCK_KEY) === 'true'; }catch(e){ /* ignore */ }
+  if(alreadyUnlocked){
+    document.getElementById('lockScreen').classList.add('hidden');
+  } else {
+    document.getElementById('lockBtn').onclick = tryUnlock;
+    document.getElementById('lockInput').addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter') tryUnlock();
+    });
+    setTimeout(()=> document.getElementById('lockInput').focus(), 100);
+  }
+})();
 
 document.getElementById('exportBtn').onclick = ()=>{
   const data = {students, attendance, makeupDates, payments, exportedAt: new Date().toISOString()};
