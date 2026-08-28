@@ -492,17 +492,16 @@
     margin:0 0 18px 0;
     color:var(--ink);
   }
-  .lock-card input[type=password]{
+  .lock-card input[type=password], .lock-card input[type=email]{
     width:100%;
     text-align:center;
-    letter-spacing:.3em;
     font-family:'IBM Plex Mono',monospace;
-    font-size:18px;
+    font-size:15px;
     padding:12px;
     border-radius:9px;
     border:1px solid var(--paper-line);
     background:var(--paper);
-    margin-bottom:12px;
+    margin-bottom:10px;
   }
   .lock-card button{
     width:100%;
@@ -515,6 +514,7 @@
     font-weight:600;
     cursor:pointer;
   }
+  .lock-card button:disabled{ opacity:.6; }
   .lock-card .err{
     color:var(--rust);
     font-size:12px;
@@ -527,8 +527,9 @@
 <div id="lockScreen">
   <div class="lock-card">
     <div class="eyebrow">Himoyalangan</div>
-    <h2>Kirish uchun parol</h2>
-    <input type="password" id="lockInput" inputmode="numeric" maxlength="12" placeholder="••••">
+    <h2>Tizimga kirish</h2>
+    <input type="email" id="lockEmail" placeholder="Email" autocomplete="username">
+    <input type="password" id="lockInput" placeholder="Parol" autocomplete="current-password">
     <button id="lockBtn">Kirish</button>
     <div class="err" id="lockErr"></div>
   </div>
@@ -603,11 +604,69 @@ const SUPABASE_URL = 'https://dhfbohawufporplgezxi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoZmJvaGF3dWZwb3JwbGdlenhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MTQ1NDAsImV4cCI6MjEwMzQ5MDU0MH0.h3U_85aTFjCX0zEkjp7haJNPnu6-KnOUSI8bfB4JgKE';
 const CLOUD_ENABLED = true;
 
+const AUTH_KEY = 'tutoring-tracker-auth';
+let authSession = null; // { access_token, refresh_token, expires_at }
+
+function loadAuthSession(){
+  try{
+    const raw = localStorage.getItem(AUTH_KEY);
+    if(raw) authSession = JSON.parse(raw);
+  }catch(e){ authSession = null; }
+}
+function saveAuthSession(session){
+  authSession = session;
+  try{ localStorage.setItem(AUTH_KEY, JSON.stringify(session)); }catch(e){ /* ignore */ }
+}
+function clearAuthSession(){
+  authSession = null;
+  try{ localStorage.removeItem(AUTH_KEY); }catch(e){ /* ignore */ }
+}
+
+async function authLogin(email, password){
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error_description || data.msg || ('HTTP ' + res.status));
+  saveAuthSession({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + (data.expires_in * 1000)
+  });
+}
+
+async function authRefresh(){
+  if(!authSession || !authSession.refresh_token) throw new Error('no refresh token');
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: authSession.refresh_token })
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error('refresh failed');
+  saveAuthSession({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: Date.now() + (data.expires_in * 1000)
+  });
+}
+
+async function ensureValidToken(){
+  if(!authSession) throw new Error('not logged in');
+  if(Date.now() > authSession.expires_at - 60000){
+    await authRefresh();
+  }
+  return authSession.access_token;
+}
+
 async function cloudGet(){
+  const token = await ensureValidToken();
   const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data?id=eq.main&select=payload`, {
     headers: {
       'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      'Authorization': `Bearer ${token}`
     }
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
@@ -616,11 +675,12 @@ async function cloudGet(){
 }
 
 async function cloudSet(payload){
+  const token = await ensureValidToken();
   const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data?on_conflict=id`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
       'Prefer': 'resolution=merge-duplicates,return=minimal'
     },
@@ -1005,37 +1065,53 @@ document.getElementById('addStudentBtn').onclick = ()=>{
   render();
 };
 
-loadData();
+// ---- Real Supabase login ----
+loadAuthSession();
 
-// ---- Simple password lock ----
-const APP_PASSWORD = '0919';
-const UNLOCK_KEY = 'tutoring-tracker-unlocked';
-
-function tryUnlock(){
-  const input = document.getElementById('lockInput');
+async function tryLogin(){
+  const emailInput = document.getElementById('lockEmail');
+  const passInput = document.getElementById('lockInput');
   const err = document.getElementById('lockErr');
-  if(input.value === APP_PASSWORD){
-    try{ localStorage.setItem(UNLOCK_KEY, 'true'); }catch(e){ /* ignore */ }
-    document.getElementById('lockScreen').classList.add('hidden');
-  } else {
-    err.textContent = 'Parol noto\'g\'ri, qayta urinib ko\'ring.';
-    input.value = '';
-    input.focus();
+  const btn = document.getElementById('lockBtn');
+  err.textContent = '';
+  if(!emailInput.value || !passInput.value){
+    err.textContent = 'Email va parolni kiriting.';
+    return;
   }
+  btn.disabled = true;
+  btn.textContent = 'Tekshirilmoqda…';
+  try{
+    await authLogin(emailInput.value.trim(), passInput.value);
+    document.getElementById('lockScreen').classList.add('hidden');
+    loadData();
+  }catch(e){
+    err.textContent = 'Email yoki parol noto\'g\'ri.';
+    passInput.value = '';
+    passInput.focus();
+  }
+  btn.disabled = false;
+  btn.textContent = 'Kirish';
 }
 
-(function initLock(){
-  let alreadyUnlocked = false;
-  try{ alreadyUnlocked = localStorage.getItem(UNLOCK_KEY) === 'true'; }catch(e){ /* ignore */ }
-  if(alreadyUnlocked){
-    document.getElementById('lockScreen').classList.add('hidden');
-  } else {
-    document.getElementById('lockBtn').onclick = tryUnlock;
-    document.getElementById('lockInput').addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter') tryUnlock();
-    });
-    setTimeout(()=> document.getElementById('lockInput').focus(), 100);
+(async function initAuth(){
+  if(authSession){
+    try{
+      await ensureValidToken();
+      document.getElementById('lockScreen').classList.add('hidden');
+      loadData();
+      return;
+    }catch(e){
+      clearAuthSession();
+    }
   }
+  document.getElementById('lockBtn').onclick = tryLogin;
+  document.getElementById('lockInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') tryLogin();
+  });
+  document.getElementById('lockEmail').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('lockInput').focus();
+  });
+  setTimeout(()=> document.getElementById('lockEmail').focus(), 100);
 })();
 
 document.getElementById('exportBtn').onclick = ()=>{
