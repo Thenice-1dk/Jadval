@@ -19,6 +19,8 @@
     --gold-soft:#f0e3c4;
     --rust:#a94a3a;
     --rust-soft:#f3ddd6;
+    --green:#3f7a4f;
+    --green-soft:#dceedf;
     --slate:#5c6b78;
     --card:#fffdf8;
   }
@@ -41,7 +43,10 @@
   }
   header.hero{
     color:var(--paper);
-    padding:8px 4px 26px 4px;
+    padding:8px 4px 22px 4px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
   }
   .eyebrow{
     font-family:'IBM Plex Mono',monospace;
@@ -54,15 +59,27 @@
   h1{
     font-family:'Fraunces',serif;
     font-weight:600;
-    font-size:30px;
+    font-size:28px;
     line-height:1.15;
-    margin:0 0 6px 0;
+    margin:0;
   }
-  .sub{
-    font-size:13.5px;
-    color:#b9c4cf;
-    line-height:1.5;
-    max-width:46ch;
+  .back-btn{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.15);
+    color:var(--paper);
+    border-radius:9px;
+    width:38px;height:38px;
+    font-size:18px;
+    cursor:pointer;
+  }
+  .logout-link{
+    background:none;
+    border:none;
+    color:#8ea0af;
+    font-size:11px;
+    text-decoration:underline;
+    cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
   }
 
   .card{
@@ -71,70 +88,56 @@
     border-radius:14px;
     padding:16px;
     margin-bottom:14px;
-    box-shadow:0 1px 0 rgba(0,0,0,.02);
   }
 
-  .add-student-row{
-    display:flex;
-    gap:8px;
-    margin-bottom:10px;
+  .field-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--slate);
+    margin:12px 0 6px 0;
   }
-  .add-student-row input[type=text]{
-    flex:1;
+  .field-label:first-child{ margin-top:0; }
+
+  input[type=text], input[type=date], input[type=number], select{
+    width:100%;
     padding:10px 12px;
     border-radius:9px;
     border:1px solid var(--paper-line);
     background:var(--paper);
-    font-size:14.5px;
-    font-family:'Inter',sans-serif;
-  }
-  .add-student-row button{
-    background:var(--ink);
-    color:var(--paper);
-    border:none;
-    border-radius:9px;
-    padding:0 16px;
     font-size:14px;
-    font-weight:600;
-    cursor:pointer;
-  }
-  .book-row{
-    margin-top:2px;
-  }
-  .book-row input[type=text]{
-    width:100%;
-    padding:9px 12px;
-    border-radius:9px;
-    border:1px solid var(--paper-line);
-    background:var(--paper);
-    font-size:13.5px;
     font-family:'Inter',sans-serif;
+    color:var(--ink);
   }
-  .start-row{
-    margin-top:8px;
+  select{ appearance:none; background-image:none; }
+
+  .tariff-row{
     display:flex;
-    align-items:center;
     gap:8px;
   }
-  .start-row label{
-    font-size:12px;
-    color:var(--slate);
-    white-space:nowrap;
-  }
-  .start-row input[type=date]{
+  .tariff-chip{
     flex:1;
-    padding:8px 10px;
-    border-radius:8px;
+    text-align:center;
+    padding:10px 4px;
+    border-radius:9px;
     border:1px solid var(--paper-line);
-    font-family:'IBM Plex Mono',monospace;
-    font-size:12.5px;
     background:var(--paper);
+    cursor:pointer;
+    user-select:none;
   }
+  .tariff-chip .t1{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px; }
+  .tariff-chip .t2{ font-size:10px; color:var(--slate); }
+  .tariff-chip.on{
+    background:var(--ink);
+    border-color:var(--ink);
+  }
+  .tariff-chip.on .t1, .tariff-chip.on .t2{ color:var(--gold-soft); }
+
   .day-picker{
     display:flex;
     gap:5px;
     flex-wrap:wrap;
-    margin:10px 0 4px 0;
   }
   .day-chip{
     font-family:'IBM Plex Mono',monospace;
@@ -154,26 +157,59 @@
     border-color:var(--ink);
     color:var(--gold-soft);
   }
-  .hint{
-    font-size:11.5px;
+
+  .primary-btn{
+    width:100%;
+    background:var(--ink);
+    color:var(--gold-soft);
+    border:none;
+    border-radius:9px;
+    padding:12px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    margin-top:14px;
+  }
+
+  .student-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    background:var(--card);
+    border:1px solid var(--paper-line);
+    border-radius:14px;
+    margin-bottom:10px;
+    cursor:pointer;
+  }
+  .student-row .info .name{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16.5px;
+  }
+  .student-row .info .meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
     color:var(--slate);
     margin-top:2px;
   }
-
-  .student-card{
-    border-top:3px solid var(--gold);
-  }
-  .student-head{
+  .student-row .right{
     display:flex;
-    align-items:baseline;
-    justify-content:space-between;
-    margin-bottom:4px;
+    align-items:center;
+    gap:8px;
   }
-  .student-name{
-    font-family:'Fraunces',serif;
+  .balance-chip{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
     font-weight:600;
-    font-size:18px;
+    padding:4px 9px;
+    border-radius:20px;
   }
+  .balance-chip.pos{ background:var(--green-soft); color:var(--green); }
+  .balance-chip.neg{ background:var(--rust-soft); color:var(--rust); }
+  .balance-chip.zero{ background:var(--paper); color:var(--slate); }
+  .chev{ color:var(--slate); font-size:16px; }
+
   .student-days{
     font-family:'IBM Plex Mono',monospace;
     font-size:11px;
@@ -183,7 +219,7 @@
   .student-book{
     font-size:12.5px;
     color:var(--slate);
-    margin:2px 0 10px 0;
+    margin:2px 0 12px 0;
   }
   .student-book b{color:var(--ink);font-weight:600;}
   .del-btn{
@@ -194,6 +230,17 @@
     cursor:pointer;
     text-decoration:underline;
     padding:0;
+  }
+  .detail-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:4px;
+  }
+  .detail-name{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:19px;
   }
 
   .cycle-nav{
@@ -245,7 +292,7 @@
     letter-spacing:.04em;
   }
   .stat.missed .n{color:var(--rust);}
-  .stat.done .n{color:#3f7a4f;}
+  .stat.done .n{color:var(--green);}
 
   .debt-banner{
     background:var(--rust-soft);
@@ -302,8 +349,8 @@
     font-weight:500;
   }
   .status-toggle button.active-done{
-    background:#3f7a4f;
-    border-color:#3f7a4f;
+    background:var(--green);
+    border-color:var(--green);
     color:#fff;
   }
   .status-toggle button.active-missed{
@@ -318,15 +365,8 @@
     gap:8px;
     align-items:center;
   }
-  .add-makeup input[type=date]{
-    flex:1;
-    padding:8px 10px;
-    border-radius:8px;
-    border:1px solid var(--paper-line);
-    font-family:'IBM Plex Mono',monospace;
-    font-size:12.5px;
-    background:var(--paper);
-  }
+  .add-makeup input[type=date]{ flex:2; }
+  .add-makeup input[type=number]{ flex:1; }
   .add-makeup button{
     background:var(--gold);
     border:none;
@@ -348,15 +388,30 @@
     margin:14px 0 8px 0;
   }
 
-  .pay-total{
-    background:var(--gold-soft);
+  .balance-banner{
     border-radius:9px;
-    padding:9px 11px;
+    padding:11px;
     font-size:13px;
-    color:var(--ink);
+    margin-bottom:10px;
+    font-weight:600;
+  }
+  .balance-banner.pos{ background:var(--green-soft); color:var(--green); }
+  .balance-banner.neg{ background:var(--rust-soft); color:var(--rust); }
+  .balance-banner.zero{ background:var(--paper); color:var(--slate); }
+  .balance-banner b{ font-family:'IBM Plex Mono',monospace; font-size:15px; }
+
+  .quick-pay-btn{
+    width:100%;
+    background:var(--gold);
+    color:#fff;
+    border:none;
+    border-radius:9px;
+    padding:11px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
     margin-bottom:10px;
   }
-  .pay-total b{font-family:'IBM Plex Mono',monospace;font-size:15px;}
 
   .pay-rows{
     display:flex;
@@ -419,15 +474,7 @@
     font-size:12.5px;
   }
   .amount-wrap input[type=number]:focus{outline:none;}
-  .add-payment input[type=date]{
-    flex:1;
-    padding:8px 10px;
-    border-radius:8px;
-    border:1px solid var(--paper-line);
-    font-family:'IBM Plex Mono',monospace;
-    font-size:12.5px;
-    background:var(--paper);
-  }
+  .add-payment input[type=date]{ flex:1; }
   .add-payment button{
     background:var(--ink);
     border:none;
@@ -438,6 +485,21 @@
     font-weight:600;
     cursor:pointer;
     white-space:nowrap;
+  }
+
+  .fab-add{
+    position:fixed;
+    right:20px;
+    bottom:24px;
+    width:56px;height:56px;
+    border-radius:50%;
+    background:var(--gold);
+    color:#fff;
+    border:none;
+    font-size:26px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);
+    cursor:pointer;
+    z-index:50;
   }
 
   .empty{
@@ -452,6 +514,12 @@
     font-size:11px;
     margin-top:18px;
     font-family:'IBM Plex Mono',monospace;
+  }
+  .err-inline{
+    color:var(--rust);
+    font-size:11.5px;
+    margin-top:6px;
+    min-height:14px;
   }
 
   #lockScreen{
@@ -477,14 +545,7 @@
     width:100%;
     text-align:center;
   }
-  .lock-card .eyebrow{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:11px;
-    letter-spacing:.14em;
-    text-transform:uppercase;
-    color:var(--gold);
-    margin-bottom:8px;
-  }
+  .lock-card .eyebrow{ margin-bottom:8px; }
   .lock-card h2{
     font-family:'Fraunces',serif;
     font-weight:600;
@@ -536,47 +597,30 @@
 </div>
 <div class="wrap">
   <header class="hero">
-    <div class="eyebrow">O'quv reyestri</div>
-    <h1>Dars Jadvali</h1>
-    <div class="sub">Har bir o'quvchi o'zining boshlangan sanasidan hisoblanadigan oylik davrga ega. O'tkazib yuborilgan darslar avtomatik "qarz" sifatida keyingi davrga o'tadi.</div>
+    <div>
+      <div class="eyebrow">O'quv reyestri</div>
+      <h1 id="pageTitle">Dars Jadvali</h1>
+    </div>
+    <button class="logout-link" id="logoutBtn">chiqish</button>
   </header>
 
-  <div class="card">
-    <div class="add-student-row">
-      <input type="text" id="newStudentName" placeholder="O'quvchi ismi" maxlength="40">
-      <button id="addStudentBtn">Qo'shish</button>
-    </div>
-    <div class="book-row">
-      <input type="text" id="newStudentBook" placeholder="Qaysi kitobdan o'qiyapti (ixtiyoriy)" maxlength="60">
-    </div>
-    <div class="start-row">
-      <label for="newStudentStart">Boshlagan sana:</label>
-      <input type="date" id="newStudentStart">
-    </div>
-    <div class="day-picker" id="newDayPicker"></div>
-    <div class="hint">Haftaning qaysi kunlari dars bo'lishini belgilang. Sana bo'sh qoldirilsa, bugungi kun boshlanish sifatida olinadi — shu sanadan har oy avtomatik hisoblanadi.</div>
-  </div>
-
-  <div id="studentsContainer"></div>
-
-  <div class="card">
-    <div class="section-label" style="margin-top:0;">Zaxira nusxa</div>
-    <div class="hint" style="margin-bottom:10px;">Ma'lumotlar shu brauzerda saqlanadi. Telefon/brauzer almashtirsangiz yoki keshni tozalasangiz, faqat shu faylga zaxira olib qo'ygan bo'lsangiz tiklay olasiz — shuning uchun vaqti-vaqti bilan zaxira olib turing.</div>
-    <div style="display:flex; gap:8px;">
-      <button id="exportBtn" style="flex:1; background:var(--ink); color:var(--gold-soft); border:none; border-radius:9px; padding:10px; font-size:13px; font-weight:600; cursor:pointer;">⬇ Zaxira olish</button>
-      <button id="importBtn" style="flex:1; background:var(--paper); color:var(--ink); border:1px solid var(--paper-line); border-radius:9px; padding:10px; font-size:13px; font-weight:600; cursor:pointer;">⬆ Tiklash</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none;">
-    </div>
-  </div>
+  <div id="mainContent"></div>
 
   <div class="footer-note" id="statusNote">yuklanmoqda…</div>
 </div>
+<button class="fab-add" id="fabAdd" title="O'quvchi qo'shish">+</button>
 
 <script>
 const DAY_LABELS = ['Ya','Du','Se','Ch','Pa','Ju','Sh'];
 const DAY_FULL = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
 const DAY_SHORT = ['yak','dush','sesh','chor','pay','jum','shan'];
 const MONTH_LOWER = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'];
+const BOOK_OPTIONS = ["Qur'on", "Mabda ul-Qiroat", "Janob ut-Tolib"];
+const TARIFFS = {
+  '2': { days: 2, price: 20, label: '2 kunlik' },
+  '3': { days: 3, price: 30, label: '3 kunlik' },
+  '5': { days: 5, price: 50, label: '5 kunlik' }
+};
 
 function pad(n){ return n<10 ? '0'+n : ''+n; }
 function dateStr(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
@@ -588,24 +632,29 @@ function todayStr(){
   const t = new Date();
   return dateStr(t.getFullYear(), t.getMonth(), t.getDate());
 }
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
 
-let students = []; // {id, name, days:[0..6], book:'', startDate:'YYYY-MM-DD'}
-let attendance = {}; // key `${studentId}:${YYYY-MM-DD}` -> 'done' | 'missed'
-let makeupDates = {}; // key studentId -> array of 'YYYY-MM-DD' manually added extra dates
-let payments = {}; // key studentId -> array of {amount, date:'YYYY-MM-DD'}
-let cycleView = {}; // key studentId -> which cycle index is currently shown (session only)
+let students = []; // {id, name, book, tariff:'2'|'3'|'5', startDate, days:[0..6]}
+let attendance = {};
+let makeupDates = {};
+let payments = {};
+let cycleView = {};
 let newDaySelection = new Set();
+let currentView = { type: 'list' }; // or { type:'detail', studentId }
 
 const STORAGE_KEY = 'tutoring-tracker-v1';
 
-const hasClaudeStorage = (typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function');
-
+// ================= Supabase (data + auth) =================
 const SUPABASE_URL = 'https://dhfbohawufporplgezxi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoZmJvaGF3dWZwb3JwbGdlenhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MTQ1NDAsImV4cCI6MjEwMzQ5MDU0MH0.h3U_85aTFjCX0zEkjp7haJNPnu6-KnOUSI8bfB4JgKE';
 const CLOUD_ENABLED = true;
 
 const AUTH_KEY = 'tutoring-tracker-auth';
-let authSession = null; // { access_token, refresh_token, expires_at }
+let authSession = null;
 
 function loadAuthSession(){
   try{
@@ -664,10 +713,7 @@ async function ensureValidToken(){
 async function cloudGet(){
   const token = await ensureValidToken();
   const res = await fetch(`${SUPABASE_URL}/rest/v1/tracker_data?id=eq.main&select=payload`, {
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${token}`
-    }
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${token}` }
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const rows = await res.json();
@@ -693,13 +739,8 @@ async function loadData(){
   try{
     const cached = localStorage.getItem(STORAGE_KEY);
     if(cached){
-      const parsed = JSON.parse(cached);
-      students = parsed.students || [];
-      attendance = parsed.attendance || {};
-      makeupDates = parsed.makeupDates || {};
-      payments = parsed.payments || {};
-      students.forEach(s=>{ if(!s.startDate) s.startDate = todayStr(); });
-      render();
+      applyPayload(JSON.parse(cached));
+      renderApp();
     }
   }catch(e){ /* ignore */ }
 
@@ -707,34 +748,26 @@ async function loadData(){
     document.getElementById('statusNote').textContent = 'bulutdan yuklanmoqda…';
     try{
       const p = await cloudGet();
-      if(p){
-        students = p.students || [];
-        attendance = p.attendance || {};
-        makeupDates = p.makeupDates || {};
-        payments = p.payments || {};
-        students.forEach(s=>{ if(!s.startDate) s.startDate = todayStr(); });
-      }
-      document.getElementById('statusNote').textContent = 'saqlangan · bulutda (barcha qurilmalarda bir xil)';
+      if(p) applyPayload(p);
+      document.getElementById('statusNote').textContent = 'saqlangan · bulutda';
     }catch(e){
       document.getElementById('statusNote').textContent = 'bulutga ulanib bo\'lmadi: ' + (e && e.message ? e.message : String(e));
     }
-  } else if(hasClaudeStorage){
-    try{
-      const res = await window.storage.get(STORAGE_KEY, false);
-      if(res && res.value){
-        const parsed = JSON.parse(res.value);
-        students = parsed.students || [];
-        attendance = parsed.attendance || {};
-        makeupDates = parsed.makeupDates || {};
-        payments = parsed.payments || {};
-        students.forEach(s=>{ if(!s.startDate) s.startDate = todayStr(); });
-      }
-    }catch(e){ /* ignore */ }
-    document.getElementById('statusNote').textContent = 'saqlangan · shu qurilmada xavfsiz';
   } else {
     document.getElementById('statusNote').textContent = 'saqlangan · shu brauzerda';
   }
-  render();
+  renderApp();
+}
+
+function applyPayload(p){
+  students = p.students || [];
+  attendance = p.attendance || {};
+  makeupDates = p.makeupDates || {};
+  payments = p.payments || {};
+  students.forEach(s=>{
+    if(!s.startDate) s.startDate = todayStr();
+    if(!s.tariff) s.tariff = '3';
+  });
 }
 
 let saveTimeout=null;
@@ -746,16 +779,9 @@ async function saveData(){
   if(CLOUD_ENABLED){
     try{
       await cloudSet(payload);
-      document.getElementById('statusNote').textContent = 'saqlangan · bulutda (barcha qurilmalarda bir xil)';
+      document.getElementById('statusNote').textContent = 'saqlangan · bulutda';
     }catch(e){
       document.getElementById('statusNote').textContent = 'bulutga saqlanmadi: ' + (e && e.message ? e.message : String(e));
-    }
-  } else if(hasClaudeStorage){
-    try{
-      await window.storage.set(STORAGE_KEY, JSON.stringify(payload), false);
-      document.getElementById('statusNote').textContent = 'saqlangan · shu qurilmada xavfsiz';
-    }catch(e){
-      document.getElementById('statusNote').textContent = 'saqlashda xatolik yuz berdi';
     }
   } else {
     document.getElementById('statusNote').textContent = 'saqlangan · shu brauzerda';
@@ -766,25 +792,8 @@ function queueSave(){
   saveTimeout = setTimeout(saveData, 250);
 }
 
-function renderNewDayPicker(){
-  const el = document.getElementById('newDayPicker');
-  el.innerHTML = '';
-  DAY_LABELS.forEach((lbl,i)=>{
-    const chip = document.createElement('div');
-    chip.className = 'day-chip' + (newDaySelection.has(i) ? ' on' : '');
-    chip.textContent = lbl;
-    chip.onclick = ()=>{
-      if(newDaySelection.has(i)) newDaySelection.delete(i);
-      else newDaySelection.add(i);
-      renderNewDayPicker();
-    };
-    el.appendChild(chip);
-  });
-}
-
-// ---- Custom monthly-cycle math, based on each student's own start date ----
+// ================= Cycle math =================
 function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
-
 function addMonthsClamped(date, n){
   const day = date.getDate();
   const target = new Date(date.getFullYear(), date.getMonth()+n, 1);
@@ -792,7 +801,6 @@ function addMonthsClamped(date, n){
   target.setDate(Math.min(day, lastDay));
   return target;
 }
-
 function getCycleBounds(startDateStr, idx){
   const start = new Date(startDateStr+'T00:00:00');
   const cycleStart = addMonthsClamped(start, idx);
@@ -801,7 +809,6 @@ function getCycleBounds(startDateStr, idx){
   cycleEnd.setDate(cycleEnd.getDate()-1);
   return {cycleStart, cycleEnd};
 }
-
 function defaultCycleIndex(startDateStr){
   const start = new Date(startDateStr+'T00:00:00');
   const today = new Date(); today.setHours(0,0,0,0);
@@ -809,7 +816,6 @@ function defaultCycleIndex(startDateStr){
   if(today.getDate() < start.getDate()) months -= 1;
   return Math.max(0, months);
 }
-
 function datesInRange(startD, endD){
   const arr = [];
   let cur = new Date(startD);
@@ -819,7 +825,6 @@ function datesInRange(startD, endD){
   }
   return arr;
 }
-
 function computeMissedInCycle(student, idx){
   if(idx < 0) return 0;
   const {cycleStart, cycleEnd} = getCycleBounds(student.startDate, idx);
@@ -831,241 +836,417 @@ function computeMissedInCycle(student, idx){
   });
   return count;
 }
-
 function formatCycleLabel(cycleStart, cycleEnd){
   return `${cycleStart.getDate()}-${MONTH_LOWER[cycleStart.getMonth()]} — ${cycleEnd.getDate()}-${MONTH_LOWER[cycleEnd.getMonth()]}`;
 }
 
-function render(){
-  renderNewDayPicker();
+// ================= Payment balance =================
+function computeBalance(student){
+  const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+  const cyclesElapsed = defaultCycleIndex(student.startDate) + 1;
+  const expected = cyclesElapsed * tariff.price;
+  const paid = (payments[student.id] || []).reduce((s,p)=> s + (Number(p.amount)||0), 0);
+  return paid - expected;
+}
+function balanceClass(bal){
+  if(bal > 0) return 'pos';
+  if(bal < 0) return 'neg';
+  return 'zero';
+}
+function balanceText(bal){
+  if(bal > 0) return `+$${bal.toLocaleString('en-US')} ortiqcha`;
+  if(bal < 0) return `-$${Math.abs(bal).toLocaleString('en-US')} qarz`;
+  return '$0 · teng';
+}
+function monthsAheadText(student, bal){
+  const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+  if(bal > 0){
+    const months = Math.floor(bal / tariff.price);
+    if(months >= 1) return `Yana taxminan ${months} oyga yetadi (yangi to'lov shart emas)`;
+    return `Keyingi oyni qisman qoplaydi`;
+  }
+  return '';
+}
 
-  const container = document.getElementById('studentsContainer');
+// ================= Render root =================
+function renderApp(){
+  if(currentView.type === 'detail'){
+    document.getElementById('pageTitle').textContent = 'O\'quvchi';
+    document.getElementById('fabAdd').style.display = 'none';
+    renderDetail(currentView.studentId);
+  } else {
+    document.getElementById('pageTitle').textContent = 'Dars Jadvali';
+    document.getElementById('fabAdd').style.display = 'block';
+    renderList();
+  }
+}
+
+function renderList(){
+  const container = document.getElementById('mainContent');
   container.innerHTML = '';
 
   if(students.length === 0){
-    container.innerHTML = '<div class="card"><div class="empty">Hali o\'quvchi qo\'shilmagan.<br>Yuqoridagi maydondan boshlang.</div></div>';
+    container.innerHTML = '<div class="card"><div class="empty">Hali o\'quvchi qo\'shilmagan.<br>Pastdagi "+" tugmasini bosing.</div></div>';
     return;
   }
 
   students.forEach(student=>{
-    const card = document.createElement('div');
-    card.className = 'card student-card';
-
-    const scheduledDayLabels = student.days.slice().sort().map(d=>DAY_FULL[d]).join(', ');
-
-    if(cycleView[student.id] === undefined){
-      cycleView[student.id] = defaultCycleIndex(student.startDate);
-    }
-    const idx = cycleView[student.id];
-    const { cycleStart, cycleEnd } = getCycleBounds(student.startDate, idx);
-    const debt = computeMissedInCycle(student, idx-1);
-
-    const cycleDates = datesInRange(cycleStart, cycleEnd).filter(dt => student.days.includes(dt.getDay()));
-    const mk = (makeupDates[student.id] || []).filter(ds => {
-      const d = new Date(ds+'T00:00:00');
-      return d >= cycleStart && d <= cycleEnd;
-    });
-
-    let doneCount = 0, missedCount = 0, totalCount = cycleDates.length + mk.length;
-    cycleDates.forEach(dt=>{
-      const key = `${student.id}:${toDateStr(dt)}`;
-      const st = attendance[key];
-      if(st==='done') doneCount++;
-      else if(st==='missed') missedCount++;
-    });
-    mk.forEach(ds=>{
-      const key = `${student.id}:${ds}`;
-      const st = attendance[key];
-      if(st==='done') doneCount++;
-      else if(st==='missed') missedCount++;
-    });
-
-    const studentPayments = (payments[student.id] || []).slice().sort((a,b)=> b.date.localeCompare(a.date));
-    const paidTotal = studentPayments.reduce((sum,p)=> sum + (Number(p.amount)||0), 0);
-
-    card.innerHTML = `
-      <div class="student-head">
-        <div class="student-name">${escapeHtml(student.name)}</div>
-        <button class="del-btn" data-del="${student.id}">o'chirish</button>
+    const bal = computeBalance(student);
+    const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+    const row = document.createElement('div');
+    row.className = 'student-row';
+    row.innerHTML = `
+      <div class="info">
+        <div class="name">${escapeHtml(student.name)}</div>
+        <div class="meta">${tariff.label} · $${tariff.price}</div>
       </div>
-      <div class="student-days">${scheduledDayLabels || 'kunlar tanlanmagan'}</div>
-      ${student.book ? `<div class="student-book">📖 <b>Kitob:</b> ${escapeHtml(student.book)}</div>` : ''}
-
-      <div class="cycle-nav">
-        <button data-cycle-prev="${student.id}">‹</button>
-        <div class="cycle-label">${formatCycleLabel(cycleStart, cycleEnd)}</div>
-        <button data-cycle-next="${student.id}">›</button>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat"><div class="n">${totalCount}</div><div class="l">jami</div></div>
-        <div class="stat done"><div class="n">${doneCount}</div><div class="l">bo'ldi</div></div>
-        <div class="stat missed"><div class="n">${missedCount}</div><div class="l">o'tmadi</div></div>
-      </div>
-      ${debt > 0 ? `<div class="debt-banner">Oldingi davrdan <b>${debt} ta</b> qoldirilgan dars bor. Pastdan shu davrga qo'shib qo'yishingiz mumkin.</div>` : ''}
-      <div class="day-rows" data-rows="${student.id}"></div>
-      <div class="add-makeup">
-        <input type="date" data-makeup-input="${student.id}">
-        <button data-add-makeup="${student.id}">+ Qarz dars qo'shish</button>
-      </div>
-
-      <div class="section-label">To'lovlar</div>
-      <div class="pay-total">Jami to'langan: <b>$${paidTotal.toLocaleString('en-US')}</b></div>
-      <div class="pay-rows" data-payrows="${student.id}"></div>
-      <div class="add-payment">
-        <div class="amount-wrap"><span>$</span><input type="number" data-pay-amount="${student.id}" placeholder="Summa" min="0"></div>
-        <input type="date" data-pay-date="${student.id}">
-        <button data-add-payment="${student.id}">+ To'lov</button>
+      <div class="right">
+        <div class="balance-chip ${balanceClass(bal)}">${bal===0?'$0':(bal>0?'+':'-')+'$'+Math.abs(bal)}</div>
+        <div class="chev">›</div>
       </div>
     `;
-    container.appendChild(card);
+    row.onclick = ()=>{ currentView = { type:'detail', studentId: student.id }; renderApp(); };
+    container.appendChild(row);
+  });
+}
 
-    const rowsEl = card.querySelector(`[data-rows="${student.id}"]`);
-    const allEntries = [
-      ...cycleDates.map(dt=>({date: dt, ds: toDateStr(dt), makeup:false})),
-      ...mk.map(ds=>({date: new Date(ds+'T00:00:00'), ds, makeup:true}))
-    ].sort((a,b)=>a.date-b.date);
+function renderDetail(studentId){
+  const container = document.getElementById('mainContent');
+  container.innerHTML = '';
+  const student = students.find(s=>s.id===studentId);
+  if(!student){ currentView = {type:'list'}; renderApp(); return; }
 
-    allEntries.forEach(entry=>{
-      const key = `${student.id}:${entry.ds}`;
-      const st = attendance[key];
-      const row = document.createElement('div');
-      row.className = 'day-row' + (entry.makeup ? ' makeup' : '');
-      row.innerHTML = `
-        <div class="d">${formatDayLabel(entry.date)}
-          ${entry.makeup ? '<small>qarz dars</small>' : ''}
-        </div>
-        <div class="status-toggle">
-          <button data-set="${key}" data-val="done" class="${st==='done'?'active-done':''}">Bo'ldi</button>
-          <button data-set="${key}" data-val="missed" class="${st==='missed'?'active-missed':''}">O'tmadi</button>
-        </div>
-      `;
-      rowsEl.appendChild(row);
-    });
+  const backRow = document.createElement('div');
+  backRow.innerHTML = `<button class="back-btn" id="backBtn" style="margin-bottom:12px;">‹</button>`;
+  container.appendChild(backRow);
+  backRow.querySelector('#backBtn').onclick = ()=>{ currentView = {type:'list'}; renderApp(); };
 
-    const payRowsEl = card.querySelector(`[data-payrows="${student.id}"]`);
-    if(studentPayments.length === 0){
-      payRowsEl.innerHTML = '<div class="hint">Hali to\'lov qayd etilmagan.</div>';
-    } else {
-      studentPayments.forEach(p=>{
-        const originalIndex = (payments[student.id]||[]).indexOf(p);
-        const row = document.createElement('div');
-        row.className = 'pay-row';
-        row.innerHTML = `
-          <div><span class="amt">$${Number(p.amount).toLocaleString('en-US')}</span> <span class="dt">— ${formatDayLabel(new Date(p.date+'T00:00:00'))}</span></div>
-          <button class="rm" data-rm-payment="${student.id}" data-rm-index="${originalIndex}">×</button>
-        `;
-        payRowsEl.appendChild(row);
-      });
-    }
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const scheduledDayLabels = student.days.slice().sort().map(d=>DAY_FULL[d]).join(', ');
+  const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+
+  if(cycleView[student.id] === undefined){
+    cycleView[student.id] = defaultCycleIndex(student.startDate);
+  }
+  const idx = cycleView[student.id];
+  const { cycleStart, cycleEnd } = getCycleBounds(student.startDate, idx);
+  const debt = computeMissedInCycle(student, idx-1);
+
+  const cycleDates = datesInRange(cycleStart, cycleEnd).filter(dt => student.days.includes(dt.getDay()));
+  const mk = (makeupDates[student.id] || []).filter(ds => {
+    const d = new Date(ds+'T00:00:00');
+    return d >= cycleStart && d <= cycleEnd;
   });
 
-  // wire up events
-  container.querySelectorAll('[data-set]').forEach(btn=>{
+  let doneCount = 0, missedCount = 0, totalCount = cycleDates.length + mk.length;
+  cycleDates.forEach(dt=>{
+    const key = `${student.id}:${toDateStr(dt)}`;
+    const st = attendance[key];
+    if(st==='done') doneCount++;
+    else if(st==='missed') missedCount++;
+  });
+  mk.forEach(ds=>{
+    const key = `${student.id}:${ds}`;
+    const st = attendance[key];
+    if(st==='done') doneCount++;
+    else if(st==='missed') missedCount++;
+  });
+
+  const studentPayments = (payments[student.id] || []).slice().sort((a,b)=> b.date.localeCompare(a.date));
+  const bal = computeBalance(student);
+
+  card.innerHTML = `
+    <div class="detail-head">
+      <div class="detail-name">${escapeHtml(student.name)}</div>
+      <button class="del-btn" data-del="${student.id}">o'chirish</button>
+    </div>
+    <div class="student-days">${scheduledDayLabels || 'kunlar tanlanmagan'} · ${tariff.label} ($${tariff.price})</div>
+    ${student.book ? `<div class="student-book">📖 <b>Kitob:</b> ${escapeHtml(student.book)}</div>` : ''}
+
+    <div class="cycle-nav">
+      <button data-cycle-prev="${student.id}">‹</button>
+      <div class="cycle-label">${formatCycleLabel(cycleStart, cycleEnd)}</div>
+      <button data-cycle-next="${student.id}">›</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat"><div class="n">${totalCount}</div><div class="l">jami</div></div>
+      <div class="stat done"><div class="n">${doneCount}</div><div class="l">bo'ldi</div></div>
+      <div class="stat missed"><div class="n">${missedCount}</div><div class="l">o'tmadi</div></div>
+    </div>
+    ${debt > 0 ? `<div class="debt-banner">Oldingi davrdan <b>${debt} ta</b> qoldirilgan dars bor.</div>` : ''}
+    <div class="day-rows" data-rows="${student.id}"></div>
+    <div class="add-makeup">
+      <input type="date" data-makeup-input="${student.id}">
+      <input type="number" data-makeup-count="${student.id}" placeholder="nechta" min="1" value="1">
+      <button data-add-makeup="${student.id}">+ Qo'shish</button>
+    </div>
+
+    <div class="section-label">To'lov holati</div>
+    <div class="balance-banner ${balanceClass(bal)}">${balanceText(bal)}</div>
+    ${bal > 0 ? `<div class="err-inline" style="color:var(--slate); margin-bottom:8px;">${monthsAheadText(student, bal)}</div>` : ''}
+    <button class="quick-pay-btn" data-quick-pay="${student.id}">+ Yangi to'lov qabul qilindi — $${tariff.price}</button>
+    <div class="pay-rows" data-payrows="${student.id}"></div>
+    <div class="add-payment">
+      <div class="amount-wrap"><span>$</span><input type="number" data-pay-amount="${student.id}" placeholder="Summa" min="0"></div>
+      <input type="date" data-pay-date="${student.id}">
+      <button data-add-payment="${student.id}">+ To'lov</button>
+    </div>
+  `;
+  container.appendChild(card);
+
+  const rowsEl = card.querySelector(`[data-rows="${student.id}"]`);
+  const allEntries = [
+    ...cycleDates.map(dt=>({date: dt, ds: toDateStr(dt), makeup:false})),
+    ...mk.map(ds=>({date: new Date(ds+'T00:00:00'), ds, makeup:true}))
+  ].sort((a,b)=>a.date-b.date);
+
+  allEntries.forEach(entry=>{
+    const key = `${student.id}:${entry.ds}`;
+    const st = attendance[key];
+    const row = document.createElement('div');
+    row.className = 'day-row' + (entry.makeup ? ' makeup' : '');
+    row.innerHTML = `
+      <div class="d">${formatDayLabel(entry.date)}
+        ${entry.makeup ? '<small>qarz dars</small>' : ''}
+      </div>
+      <div class="status-toggle">
+        <button data-set="${key}" data-val="done" class="${st==='done'?'active-done':''}">Bo'ldi</button>
+        <button data-set="${key}" data-val="missed" class="${st==='missed'?'active-missed':''}">O'tmadi</button>
+      </div>
+    `;
+    rowsEl.appendChild(row);
+  });
+
+  const payRowsEl = card.querySelector(`[data-payrows="${student.id}"]`);
+  if(studentPayments.length === 0){
+    payRowsEl.innerHTML = '<div class="empty" style="padding:10px;">Hali to\'lov qayd etilmagan.</div>';
+  } else {
+    studentPayments.forEach(p=>{
+      const originalIndex = (payments[student.id]||[]).indexOf(p);
+      const row = document.createElement('div');
+      row.className = 'pay-row';
+      row.innerHTML = `
+        <div><span class="amt">$${Number(p.amount).toLocaleString('en-US')}</span> <span class="dt">— ${formatDayLabel(new Date(p.date+'T00:00:00'))}</span></div>
+        <button class="rm" data-rm-payment="${student.id}" data-rm-index="${originalIndex}">×</button>
+      `;
+      payRowsEl.appendChild(row);
+    });
+  }
+
+  // ---- events ----
+  card.querySelectorAll('[data-set]').forEach(btn=>{
     btn.onclick = ()=>{
       const key = btn.getAttribute('data-set');
       const val = btn.getAttribute('data-val');
       attendance[key] = (attendance[key] === val) ? undefined : val;
       if(attendance[key] === undefined) delete attendance[key];
       queueSave();
-      render();
+      renderApp();
     };
   });
-  container.querySelectorAll('[data-del]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute('data-del');
-      const s = students.find(s=>s.id===id);
-      if(s && confirm(`"${s.name}"ni o'chirmoqchimisiz?`)){
-        students = students.filter(s=>s.id!==id);
-        queueSave();
-        render();
-      }
-    };
-  });
-  container.querySelectorAll('[data-add-makeup]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute('data-add-makeup');
-      const input = document.querySelector(`[data-makeup-input="${id}"]`);
-      if(!input || !input.value) return;
-      if(!makeupDates[id]) makeupDates[id] = [];
-      if(!makeupDates[id].includes(input.value)){
-        makeupDates[id].push(input.value);
-      }
+  card.querySelector(`[data-del="${student.id}"]`).onclick = ()=>{
+    if(confirm(`"${student.name}"ni o'chirmoqchimisiz?`)){
+      students = students.filter(s=>s.id!==student.id);
+      currentView = {type:'list'};
       queueSave();
-      render();
-    };
-  });
-  container.querySelectorAll('[data-add-payment]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute('data-add-payment');
-      const amountInput = document.querySelector(`[data-pay-amount="${id}"]`);
-      const dateInput = document.querySelector(`[data-pay-date="${id}"]`);
-      const amount = Number(amountInput.value);
-      if(!amount || amount <= 0){ amountInput.focus(); return; }
-      if(!dateInput.value){ dateInput.focus(); return; }
-      if(!payments[id]) payments[id] = [];
-      payments[id].push({ amount, date: dateInput.value });
-      queueSave();
-      render();
-    };
-  });
-  container.querySelectorAll('[data-rm-payment]').forEach(btn=>{
+      renderApp();
+    }
+  };
+  card.querySelector(`[data-add-makeup="${student.id}"]`).onclick = ()=>{
+    const dateInput = card.querySelector(`[data-makeup-input="${student.id}"]`);
+    const countInput = card.querySelector(`[data-makeup-count="${student.id}"]`);
+    const count = Math.max(1, parseInt(countInput.value || '1', 10));
+    if(!dateInput.value) return;
+    if(!makeupDates[student.id]) makeupDates[student.id] = [];
+    let cur = new Date(dateInput.value+'T00:00:00');
+    let added = 0;
+    let guard = 0;
+    while(added < count && guard < 400){
+      guard++;
+      if(student.days.length === 0 || student.days.includes(cur.getDay())){
+        const ds = toDateStr(cur);
+        if(!makeupDates[student.id].includes(ds)){
+          makeupDates[student.id].push(ds);
+        }
+        added++;
+      }
+      cur.setDate(cur.getDate()+1);
+    }
+    queueSave();
+    renderApp();
+  };
+  card.querySelector(`[data-quick-pay="${student.id}"]`).onclick = ()=>{
+    if(!payments[student.id]) payments[student.id] = [];
+    payments[student.id].push({ amount: tariff.price, date: todayStr() });
+    queueSave();
+    renderApp();
+  };
+  card.querySelector(`[data-add-payment="${student.id}"]`).onclick = ()=>{
+    const amountInput = card.querySelector(`[data-pay-amount="${student.id}"]`);
+    const dateInput = card.querySelector(`[data-pay-date="${student.id}"]`);
+    const amount = Number(amountInput.value);
+    if(!amount || amount <= 0){ amountInput.focus(); return; }
+    if(!dateInput.value){ dateInput.focus(); return; }
+    if(!payments[student.id]) payments[student.id] = [];
+    payments[student.id].push({ amount, date: dateInput.value });
+    queueSave();
+    renderApp();
+  };
+  card.querySelectorAll('[data-rm-payment]').forEach(btn=>{
     btn.onclick = ()=>{
       const id = btn.getAttribute('data-rm-payment');
-      const idx = Number(btn.getAttribute('data-rm-index'));
+      const idx2 = Number(btn.getAttribute('data-rm-index'));
       if(payments[id]){
-        payments[id].splice(idx, 1);
+        payments[id].splice(idx2, 1);
         queueSave();
-        render();
+        renderApp();
       }
     };
   });
-  container.querySelectorAll('[data-cycle-prev]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute('data-cycle-prev');
-      cycleView[id] = (cycleView[id] ?? 0) - 1;
-      render();
+  card.querySelector(`[data-cycle-prev="${student.id}"]`).onclick = ()=>{
+    cycleView[student.id] = (cycleView[student.id] ?? 0) - 1;
+    renderApp();
+  };
+  card.querySelector(`[data-cycle-next="${student.id}"]`).onclick = ()=>{
+    cycleView[student.id] = (cycleView[student.id] ?? 0) + 1;
+    renderApp();
+  };
+}
+
+// ================= Add-student modal (inline card at top of list) =================
+let addFormOpen = false;
+let selectedTariff = '3';
+
+function renderAddForm(){
+  const container = document.getElementById('mainContent');
+  container.innerHTML = '';
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  let bookOptionsHtml = BOOK_OPTIONS.map(b=>`<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+
+  card.innerHTML = `
+    <div class="field-label">Ism</div>
+    <input type="text" id="newStudentName" maxlength="40">
+
+    <div class="field-label">Kitob</div>
+    <select id="newStudentBookSelect">
+      ${bookOptionsHtml}
+      <option value="__other__">Boshqa...</option>
+    </select>
+    <input type="text" id="newStudentBookCustom" placeholder="Kitob nomini yozing" style="display:none; margin-top:8px;">
+
+    <div class="field-label">Tarif</div>
+    <div class="tariff-row" id="tariffRow">
+      ${Object.entries(TARIFFS).map(([k,t])=>`<div class="tariff-chip${k===selectedTariff?' on':''}" data-tariff="${k}"><div class="t1">$${t.price}</div><div class="t2">${t.label}</div></div>`).join('')}
+    </div>
+
+    <div class="field-label">Boshlagan sana</div>
+    <input type="date" id="newStudentStart">
+
+    <div class="field-label">Haftalik kunlar</div>
+    <div class="day-picker" id="newDayPicker"></div>
+    <div class="err-inline" id="addErr"></div>
+
+    <button class="primary-btn" id="submitAddBtn">Qo'shish</button>
+    <button class="primary-btn" id="cancelAddBtn" style="background:var(--paper); color:var(--ink); margin-top:8px;">Bekor qilish</button>
+  `;
+  container.appendChild(card);
+
+  renderDayPickerInto(document.getElementById('newDayPicker'));
+
+  card.querySelector('#newStudentBookSelect').onchange = (e)=>{
+    const customInput = document.getElementById('newStudentBookCustom');
+    customInput.style.display = e.target.value === '__other__' ? 'block' : 'none';
+  };
+
+  card.querySelectorAll('[data-tariff]').forEach(chip=>{
+    chip.onclick = ()=>{
+      selectedTariff = chip.getAttribute('data-tariff');
+      card.querySelectorAll('[data-tariff]').forEach(c=>c.classList.remove('on'));
+      chip.classList.add('on');
     };
   });
-  container.querySelectorAll('[data-cycle-next]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const id = btn.getAttribute('data-cycle-next');
-      cycleView[id] = (cycleView[id] ?? 0) + 1;
-      render();
+
+  card.querySelector('#cancelAddBtn').onclick = ()=>{
+    addFormOpen = false;
+    newDaySelection = new Set();
+    renderApp();
+  };
+
+  card.querySelector('#submitAddBtn').onclick = ()=>{
+    const nameInput = document.getElementById('newStudentName');
+    const bookSelect = document.getElementById('newStudentBookSelect');
+    const bookCustom = document.getElementById('newStudentBookCustom');
+    const startInput = document.getElementById('newStudentStart');
+    const err = document.getElementById('addErr');
+    const name = nameInput.value.trim();
+    if(!name){ err.textContent = 'Ismni kiriting.'; nameInput.focus(); return; }
+    if(newDaySelection.size === 0){ err.textContent = 'Kamida bitta kun tanlang.'; return; }
+
+    const tariffDays = TARIFFS[selectedTariff].days;
+    if(newDaySelection.size !== tariffDays){
+      const proceed = confirm(`Siz ${TARIFFS[selectedTariff].label} tarif tanladingiz, lekin ${newDaySelection.size} kun belgiladingiz. Shunday davom etamizmi?`);
+      if(!proceed) return;
+    }
+
+    const book = bookSelect.value === '__other__' ? bookCustom.value.trim() : bookSelect.value;
+    const id = 's' + Date.now() + Math.random().toString(36).slice(2,7);
+    students.push({
+      id,
+      name,
+      book,
+      tariff: selectedTariff,
+      startDate: startInput.value || todayStr(),
+      days: Array.from(newDaySelection).sort()
+    });
+    newDaySelection = new Set();
+    selectedTariff = '3';
+    addFormOpen = false;
+    queueSave();
+    renderApp();
+  };
+}
+
+function renderDayPickerInto(el){
+  el.innerHTML = '';
+  DAY_LABELS.forEach((lbl,i)=>{
+    const chip = document.createElement('div');
+    chip.className = 'day-chip' + (newDaySelection.has(i) ? ' on' : '');
+    chip.textContent = lbl;
+    chip.onclick = ()=>{
+      if(newDaySelection.has(i)) newDaySelection.delete(i);
+      else newDaySelection.add(i);
+      renderDayPickerInto(el);
     };
+    el.appendChild(chip);
   });
 }
 
-function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-document.getElementById('addStudentBtn').onclick = ()=>{
-  const nameInput = document.getElementById('newStudentName');
-  const bookInput = document.getElementById('newStudentBook');
-  const startInput = document.getElementById('newStudentStart');
-  const name = nameInput.value.trim();
-  if(!name){ nameInput.focus(); return; }
-  if(newDaySelection.size === 0){ alert('Kamida bitta kun tanlang.'); return; }
-  const id = 's' + Date.now() + Math.random().toString(36).slice(2,7);
-  students.push({
-    id,
-    name,
-    book: bookInput.value.trim(),
-    startDate: startInput.value || todayStr(),
-    days: Array.from(newDaySelection).sort()
-  });
-  nameInput.value = '';
-  bookInput.value = '';
-  startInput.value = '';
+document.getElementById('fabAdd').onclick = ()=>{
+  addFormOpen = true;
   newDaySelection = new Set();
-  queueSave();
-  render();
+  selectedTariff = '3';
+  renderAddForm();
 };
 
-// ---- Real Supabase login ----
+// override renderApp to respect addFormOpen
+const _origRenderApp = renderApp;
+renderApp = function(){
+  if(addFormOpen){
+    document.getElementById('pageTitle').textContent = 'Yangi o\'quvchi';
+    document.getElementById('fabAdd').style.display = 'none';
+    renderAddForm();
+    return;
+  }
+  _origRenderApp();
+};
+
+// ================= Auth =================
 loadAuthSession();
 
 async function tryLogin(){
@@ -1085,13 +1266,20 @@ async function tryLogin(){
     document.getElementById('lockScreen').classList.add('hidden');
     loadData();
   }catch(e){
-    err.textContent = 'Email yoki parol noto\'g\'ri.';
+    err.textContent = 'Xato: ' + (e && e.message ? e.message : String(e));
     passInput.value = '';
     passInput.focus();
   }
   btn.disabled = false;
   btn.textContent = 'Kirish';
 }
+
+document.getElementById('logoutBtn').onclick = ()=>{
+  if(confirm('Tizimdan chiqmoqchimisiz?')){
+    clearAuthSession();
+    location.reload();
+  }
+};
 
 (async function initAuth(){
   if(authSession){
@@ -1113,48 +1301,6 @@ async function tryLogin(){
   });
   setTimeout(()=> document.getElementById('lockEmail').focus(), 100);
 })();
-
-document.getElementById('exportBtn').onclick = ()=>{
-  const data = {students, attendance, makeupDates, payments, exportedAt: new Date().toISOString()};
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `dars-jadvali-zaxira-${todayStr()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
-
-document.getElementById('importBtn').onclick = ()=>{
-  document.getElementById('importFile').click();
-};
-
-document.getElementById('importFile').onchange = (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (evt)=>{
-    try{
-      const data = JSON.parse(evt.target.result);
-      if(!confirm('Zaxiradan tiklansa, hozirgi ma\'lumotlar shu fayldagi bilan almashtiriladi. Davom etasizmi?')) return;
-      students = data.students || [];
-      attendance = data.attendance || {};
-      makeupDates = data.makeupDates || {};
-      payments = data.payments || {};
-      students.forEach(s=>{ if(!s.startDate) s.startDate = todayStr(); });
-      cycleView = {};
-      queueSave();
-      render();
-      alert('Ma\'lumotlar muvaffaqiyatli tiklandi.');
-    }catch(err){
-      alert('Fayl noto\'g\'ri formatda. Faqat shu dastur chiqargan zaxira faylini yuklang.');
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-};
 </script>
 </body>
 </html>
