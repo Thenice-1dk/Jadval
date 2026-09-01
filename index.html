@@ -359,25 +359,64 @@
     color:#fff;
   }
 
-  .add-makeup{
-    margin-top:10px;
-    display:flex;
-    gap:8px;
-    align-items:center;
-  }
-  .add-makeup input[type=date]{ flex:2; }
-  .add-makeup input[type=number]{ flex:1; }
-  .add-makeup button{
-    background:var(--gold);
-    border:none;
-    color:#fff;
-    border-radius:8px;
-    padding:8px 12px;
-    font-size:12px;
+  .makeup-toggle-btn{
+    width:100%;
+    background:var(--gold-soft);
+    color:var(--ink);
+    border:1px dashed var(--gold);
+    border-radius:9px;
+    padding:10px;
+    font-size:13px;
     font-weight:600;
     cursor:pointer;
-    white-space:nowrap;
+    margin-top:10px;
   }
+  .makeup-panel{
+    margin-top:10px;
+    background:var(--paper);
+    border-radius:9px;
+    padding:10px;
+  }
+  .makeup-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:6px;
+    margin-bottom:10px;
+  }
+  .makeup-day-chip{
+    text-align:center;
+    padding:8px 2px;
+    border-radius:8px;
+    border:1px solid var(--paper-line);
+    background:var(--card);
+    cursor:pointer;
+    user-select:none;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    line-height:1.4;
+  }
+  .makeup-day-chip .wd{ color:var(--slate); font-size:10px; }
+  .makeup-day-chip.on{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:var(--gold-soft);
+  }
+  .makeup-day-chip.on .wd{ color:var(--gold-soft); }
+  .makeup-panel-actions{
+    display:flex;
+    gap:8px;
+  }
+  .makeup-panel-actions button{
+    flex:1;
+    border:none;
+    border-radius:8px;
+    padding:9px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .makeup-confirm-btn{ background:var(--gold); color:#fff; }
+  .makeup-cancel-btn{ background:var(--card); color:var(--slate); border:1px solid var(--paper-line) !important; }
 
   .section-label{
     font-family:'IBM Plex Mono',monospace;
@@ -640,7 +679,8 @@ function escapeHtml(str){
 
 let students = []; // {id, name, book, tariff:'2'|'3'|'5', startDate, days:[0..6]}
 let attendance = {};
-let makeupDates = {};
+let makeupDates = {}; // legacy freeform entries (kept for backward compatibility display)
+let reschedule = {}; // { studentId: { originalMissedDateStr: newDateStr } }
 let payments = {};
 let cycleView = {};
 let newDaySelection = new Set();
@@ -763,6 +803,7 @@ function applyPayload(p){
   students = p.students || [];
   attendance = p.attendance || {};
   makeupDates = p.makeupDates || {};
+  reschedule = p.reschedule || {};
   payments = p.payments || {};
   students.forEach(s=>{
     if(!s.startDate) s.startDate = todayStr();
@@ -773,7 +814,7 @@ function applyPayload(p){
 let saveTimeout=null;
 async function saveData(){
   document.getElementById('statusNote').textContent = 'saqlanmoqda…';
-  const payload = {students, attendance, makeupDates, payments};
+  const payload = {students, attendance, makeupDates, reschedule, payments};
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); }catch(e){ /* ignore */ }
 
   if(CLOUD_ENABLED){
@@ -825,16 +866,17 @@ function datesInRange(startD, endD){
   }
   return arr;
 }
-function computeMissedInCycle(student, idx){
-  if(idx < 0) return 0;
+function computeMissedDatesInCycle(student, idx){
+  if(idx < 0) return [];
   const {cycleStart, cycleEnd} = getCycleBounds(student.startDate, idx);
   const dates = datesInRange(cycleStart, cycleEnd).filter(dt=>student.days.includes(dt.getDay()));
-  let count = 0;
-  dates.forEach(dt=>{
+  return dates.filter(dt=>{
     const key = `${student.id}:${toDateStr(dt)}`;
-    if(attendance[key] === 'missed') count++;
+    return attendance[key] === 'missed';
   });
-  return count;
+}
+function computeMissedInCycle(student, idx){
+  return computeMissedDatesInCycle(student, idx).length;
 }
 function formatCycleLabel(cycleStart, cycleEnd){
   return `${cycleStart.getDate()}-${MONTH_LOWER[cycleStart.getMonth()]} — ${cycleEnd.getDate()}-${MONTH_LOWER[cycleEnd.getMonth()]}`;
@@ -932,15 +974,24 @@ function renderDetail(studentId){
   }
   const idx = cycleView[student.id];
   const { cycleStart, cycleEnd } = getCycleBounds(student.startDate, idx);
-  const debt = computeMissedInCycle(student, idx-1);
+  const missedDatesPrev = computeMissedDatesInCycle(student, idx-1);
+  const missedDatesCurrent = computeMissedDatesInCycle(student, idx);
+  const allMissedDates = [...missedDatesPrev, ...missedDatesCurrent].sort((a,b)=>a-b);
 
   const cycleDates = datesInRange(cycleStart, cycleEnd).filter(dt => student.days.includes(dt.getDay()));
+
+  const studentReschedule = reschedule[student.id] || {};
+  const rescheduledTargetsInCycle = Object.entries(studentReschedule)
+    .filter(([origDs, newDs]) => {
+      const d = new Date(newDs+'T00:00:00');
+      return d >= cycleStart && d <= cycleEnd;
+    });
   const mk = (makeupDates[student.id] || []).filter(ds => {
     const d = new Date(ds+'T00:00:00');
     return d >= cycleStart && d <= cycleEnd;
   });
 
-  let doneCount = 0, missedCount = 0, totalCount = cycleDates.length + mk.length;
+  let doneCount = 0, missedCount = 0, totalCount = cycleDates.length + mk.length + rescheduledTargetsInCycle.length;
   cycleDates.forEach(dt=>{
     const key = `${student.id}:${toDateStr(dt)}`;
     const st = attendance[key];
@@ -953,6 +1004,12 @@ function renderDetail(studentId){
     if(st==='done') doneCount++;
     else if(st==='missed') missedCount++;
   });
+  rescheduledTargetsInCycle.forEach(([origDs, newDs])=>{
+    const key = `${student.id}:${newDs}`;
+    const st = attendance[key];
+    if(st==='done') doneCount++;
+    else if(st==='missed') missedCount++;
+  });
 
   const studentPayments = (payments[student.id] || []).slice().sort((a,b)=> b.date.localeCompare(a.date));
   const bal = computeBalance(student);
@@ -960,7 +1017,10 @@ function renderDetail(studentId){
   card.innerHTML = `
     <div class="detail-head">
       <div class="detail-name">${escapeHtml(student.name)}</div>
-      <button class="del-btn" data-del="${student.id}">o'chirish</button>
+      <div style="display:flex; gap:12px;">
+        <button class="del-btn" data-edit="${student.id}">tahrirlash</button>
+        <button class="del-btn" data-del="${student.id}">o'chirish</button>
+      </div>
     </div>
     <div class="student-days">${scheduledDayLabels || 'kunlar tanlanmagan'} · ${tariff.label} ($${tariff.price})</div>
     ${student.book ? `<div class="student-book">📖 <b>Kitob:</b> ${escapeHtml(student.book)}</div>` : ''}
@@ -976,13 +1036,12 @@ function renderDetail(studentId){
       <div class="stat done"><div class="n">${doneCount}</div><div class="l">bo'ldi</div></div>
       <div class="stat missed"><div class="n">${missedCount}</div><div class="l">o'tmadi</div></div>
     </div>
-    ${debt > 0 ? `<div class="debt-banner">Oldingi davrdan <b>${debt} ta</b> qoldirilgan dars bor.</div>` : ''}
+
+    <div class="section-label">Qoldirilgan darslar</div>
+    <div class="day-rows" id="missedList-${student.id}" style="margin-bottom:14px;"></div>
+
+    <div class="section-label">Dars kunlari</div>
     <div class="day-rows" data-rows="${student.id}"></div>
-    <div class="add-makeup">
-      <input type="date" data-makeup-input="${student.id}">
-      <input type="number" data-makeup-count="${student.id}" placeholder="nechta" min="1" value="1">
-      <button data-add-makeup="${student.id}">+ Qo'shish</button>
-    </div>
 
     <div class="section-label">To'lov holati</div>
     <div class="balance-banner ${balanceClass(bal)}">${balanceText(bal)}</div>
@@ -997,24 +1056,70 @@ function renderDetail(studentId){
   `;
   container.appendChild(card);
 
+  // ---- Missed lessons list (with reschedule action) ----
+  const missedListEl = card.querySelector(`#missedList-${student.id}`);
+  if(allMissedDates.length === 0){
+    missedListEl.innerHTML = '<div class="empty" style="padding:10px;">Qoldirilgan dars yo\'q.</div>';
+  } else {
+    allMissedDates.forEach(dt=>{
+      const origDs = toDateStr(dt);
+      const newDs = studentReschedule[origDs];
+      const row = document.createElement('div');
+      row.className = 'day-row';
+      if(newDs){
+        row.innerHTML = `
+          <div class="d">${formatDayLabel(dt)} <small>→ ${formatDayLabel(new Date(newDs+'T00:00:00'))}ga ko'chirildi</small></div>
+          <button type="button" class="rm" data-undo-reschedule="${student.id}" data-orig="${origDs}" style="background:none;border:1px solid var(--paper-line);color:var(--slate);font-size:16px;cursor:pointer;padding:6px 12px;border-radius:8px;min-width:36px;min-height:36px;">×</button>
+        `;
+      } else {
+        row.innerHTML = `
+          <div class="d">${formatDayLabel(dt)}</div>
+          <button class="makeup-toggle-btn" style="margin:0; width:auto; padding:6px 12px; font-size:11.5px;" data-start-reschedule="${student.id}" data-orig="${origDs}">Ko'chirish</button>
+        `;
+      }
+      missedListEl.appendChild(row);
+
+      // inline date-picker row, shown when "Ko'chirish" tapped
+      const pickerRow = document.createElement('div');
+      pickerRow.id = `reschedulePicker-${student.id}-${origDs}`;
+      pickerRow.style.display = 'none';
+      pickerRow.style.padding = '8px 10px';
+      pickerRow.innerHTML = `
+        <div style="display:flex; gap:8px;">
+          <input type="date" data-reschedule-input="${student.id}" data-reschedule-orig="${origDs}" style="flex:1;">
+          <button data-reschedule-confirm="${student.id}" data-reschedule-orig2="${origDs}" style="background:var(--gold); border:none; color:#fff; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:600;">Tasdiqlash</button>
+        </div>
+      `;
+      missedListEl.appendChild(pickerRow);
+    });
+  }
+
   const rowsEl = card.querySelector(`[data-rows="${student.id}"]`);
   const allEntries = [
-    ...cycleDates.map(dt=>({date: dt, ds: toDateStr(dt), makeup:false})),
-    ...mk.map(ds=>({date: new Date(ds+'T00:00:00'), ds, makeup:true}))
+    ...cycleDates.map(dt=>({date: dt, ds: toDateStr(dt), tag:null, kind:'regular'})),
+    ...mk.map(ds=>({date: new Date(ds+'T00:00:00'), ds, tag:'qo\'shimcha dars', kind:'legacy'})),
+    ...rescheduledTargetsInCycle.map(([origDs,newDs])=>({date: new Date(newDs+'T00:00:00'), ds:newDs, tag: `${formatDayLabel(new Date(origDs+'T00:00:00'))}dan ko'chirilgan`, kind:'rescheduled', origDs}))
   ].sort((a,b)=>a.date-b.date);
 
   allEntries.forEach(entry=>{
     const key = `${student.id}:${entry.ds}`;
     const st = attendance[key];
     const row = document.createElement('div');
-    row.className = 'day-row' + (entry.makeup ? ' makeup' : '');
+    row.className = 'day-row' + (entry.tag ? ' makeup' : '');
+    let removeBtn = '';
+    if(entry.kind === 'legacy'){
+      removeBtn = `<button type="button" class="rm" data-rm-legacy="${student.id}" data-rm-legacy-ds="${entry.ds}" style="background:none;border:1px solid var(--paper-line);color:var(--slate);font-size:16px;cursor:pointer;padding:6px 12px;border-radius:8px;min-width:36px;min-height:36px;">×</button>`;
+    } else if(entry.kind === 'rescheduled'){
+      removeBtn = `<button type="button" class="rm" data-undo-reschedule="${student.id}" data-orig="${entry.origDs}" style="background:none;border:1px solid var(--paper-line);color:var(--slate);font-size:16px;cursor:pointer;padding:6px 12px;border-radius:8px;min-width:36px;min-height:36px;">×</button>`;
+    }
     row.innerHTML = `
       <div class="d">${formatDayLabel(entry.date)}
-        ${entry.makeup ? '<small>qarz dars</small>' : ''}
+        ${entry.tag ? `<small>${entry.tag}</small>` : ''}
       </div>
       <div class="status-toggle">
         <button data-set="${key}" data-val="done" class="${st==='done'?'active-done':''}">Bo'ldi</button>
         <button data-set="${key}" data-val="missed" class="${st==='missed'?'active-missed':''}">O'tmadi</button>
+        ${removeBtn}
       </div>
     `;
     rowsEl.appendChild(row);
@@ -1047,6 +1152,58 @@ function renderDetail(studentId){
       renderApp();
     };
   });
+  card.querySelectorAll('[data-start-reschedule]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-start-reschedule');
+      const orig = btn.getAttribute('data-orig');
+      const picker = card.querySelector(`#reschedulePicker-${id}-${orig}`);
+      picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+    };
+  });
+  card.querySelectorAll('[data-reschedule-confirm]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-reschedule-confirm');
+      const orig = btn.getAttribute('data-reschedule-orig2');
+      const input = card.querySelector(`[data-reschedule-input="${id}"][data-reschedule-orig="${orig}"]`);
+      if(!input.value) return;
+      if(!reschedule[id]) reschedule[id] = {};
+      reschedule[id][orig] = input.value;
+      queueSave();
+      renderApp();
+    };
+  });
+  card.querySelectorAll('[data-rm-legacy]').forEach(btn=>{
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const id = this.getAttribute('data-rm-legacy');
+      const ds = this.getAttribute('data-rm-legacy-ds');
+      if(makeupDates[id]){
+        makeupDates[id] = makeupDates[id].filter(d => d !== ds);
+        delete attendance[`${id}:${ds}`];
+        queueSave();
+        renderApp();
+      }
+    });
+  });
+  card.querySelectorAll('[data-undo-reschedule]').forEach(btn=>{
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const id = this.getAttribute('data-undo-reschedule');
+      const orig = this.getAttribute('data-orig');
+      if(reschedule[id] && reschedule[id][orig] !== undefined){
+        const newDs = reschedule[id][orig];
+        if(newDs) delete attendance[`${id}:${newDs}`];
+        delete reschedule[id][orig];
+        queueSave();
+        renderApp();
+      }
+    });
+  });
+  card.querySelector(`[data-edit="${student.id}"]`).onclick = ()=>{
+    editFormOpen = true;
+    editingStudentId = student.id;
+    renderApp();
+  };
   card.querySelector(`[data-del="${student.id}"]`).onclick = ()=>{
     if(confirm(`"${student.name}"ni o'chirmoqchimisiz?`)){
       students = students.filter(s=>s.id!==student.id);
@@ -1054,29 +1211,6 @@ function renderDetail(studentId){
       queueSave();
       renderApp();
     }
-  };
-  card.querySelector(`[data-add-makeup="${student.id}"]`).onclick = ()=>{
-    const dateInput = card.querySelector(`[data-makeup-input="${student.id}"]`);
-    const countInput = card.querySelector(`[data-makeup-count="${student.id}"]`);
-    const count = Math.max(1, parseInt(countInput.value || '1', 10));
-    if(!dateInput.value) return;
-    if(!makeupDates[student.id]) makeupDates[student.id] = [];
-    let cur = new Date(dateInput.value+'T00:00:00');
-    let added = 0;
-    let guard = 0;
-    while(added < count && guard < 400){
-      guard++;
-      if(student.days.length === 0 || student.days.includes(cur.getDay())){
-        const ds = toDateStr(cur);
-        if(!makeupDates[student.id].includes(ds)){
-          makeupDates[student.id].push(ds);
-        }
-        added++;
-      }
-      cur.setDate(cur.getDate()+1);
-    }
-    queueSave();
-    renderApp();
   };
   card.querySelector(`[data-quick-pay="${student.id}"]`).onclick = ()=>{
     if(!payments[student.id]) payments[student.id] = [];
@@ -1119,6 +1253,8 @@ function renderDetail(studentId){
 // ================= Add-student modal (inline card at top of list) =================
 let addFormOpen = false;
 let selectedTariff = '3';
+let editFormOpen = false;
+let editingStudentId = null;
 
 function renderAddForm(){
   const container = document.getElementById('mainContent');
@@ -1227,6 +1363,115 @@ function renderDayPickerInto(el){
   });
 }
 
+// ================= Edit-student form =================
+function renderEditForm(){
+  const container = document.getElementById('mainContent');
+  container.innerHTML = '';
+  const student = students.find(s=>s.id===editingStudentId);
+  if(!student){ editFormOpen = false; currentView = {type:'list'}; renderApp(); return; }
+
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const isCustomBook = student.book && !BOOK_OPTIONS.includes(student.book);
+  let bookOptionsHtml = BOOK_OPTIONS.map(b=>`<option value="${escapeHtml(b)}"${b===student.book?' selected':''}>${escapeHtml(b)}</option>`).join('');
+
+  card.innerHTML = `
+    <div class="field-label">Ism</div>
+    <input type="text" id="editStudentName" maxlength="40" value="${escapeHtml(student.name)}">
+
+    <div class="field-label">Kitob</div>
+    <select id="editStudentBookSelect">
+      ${bookOptionsHtml}
+      <option value="__other__"${isCustomBook?' selected':''}>Boshqa...</option>
+    </select>
+    <input type="text" id="editStudentBookCustom" placeholder="Kitob nomini yozing" style="display:${isCustomBook?'block':'none'}; margin-top:8px;" value="${isCustomBook?escapeHtml(student.book):''}">
+
+    <div class="field-label">Tarif</div>
+    <div class="tariff-row" id="editTariffRow">
+      ${Object.entries(TARIFFS).map(([k,t])=>`<div class="tariff-chip${k===student.tariff?' on':''}" data-edit-tariff="${k}"><div class="t1">$${t.price}</div><div class="t2">${t.label}</div></div>`).join('')}
+    </div>
+
+    <div class="field-label">Boshlagan sana</div>
+    <input type="date" id="editStudentStart" value="${student.startDate}">
+
+    <div class="field-label">Haftalik kunlar</div>
+    <div class="day-picker" id="editDayPicker"></div>
+    <div class="err-inline" id="editErr"></div>
+
+    <button class="primary-btn" id="submitEditBtn">Saqlash</button>
+    <button class="primary-btn" id="cancelEditBtn" style="background:var(--paper); color:var(--ink); margin-top:8px;">Bekor qilish</button>
+  `;
+  container.appendChild(card);
+
+  let editDaySelection = new Set(student.days);
+  let editSelectedTariff = student.tariff;
+
+  function renderEditDayPicker(){
+    const el = document.getElementById('editDayPicker');
+    el.innerHTML = '';
+    DAY_LABELS.forEach((lbl,i)=>{
+      const chip = document.createElement('div');
+      chip.className = 'day-chip' + (editDaySelection.has(i) ? ' on' : '');
+      chip.textContent = lbl;
+      chip.onclick = ()=>{
+        if(editDaySelection.has(i)) editDaySelection.delete(i);
+        else editDaySelection.add(i);
+        renderEditDayPicker();
+      };
+      el.appendChild(chip);
+    });
+  }
+  renderEditDayPicker();
+
+  card.querySelector('#editStudentBookSelect').onchange = (e)=>{
+    document.getElementById('editStudentBookCustom').style.display = e.target.value === '__other__' ? 'block' : 'none';
+  };
+
+  card.querySelectorAll('[data-edit-tariff]').forEach(chip=>{
+    chip.onclick = ()=>{
+      editSelectedTariff = chip.getAttribute('data-edit-tariff');
+      card.querySelectorAll('[data-edit-tariff]').forEach(c=>c.classList.remove('on'));
+      chip.classList.add('on');
+    };
+  });
+
+  card.querySelector('#cancelEditBtn').onclick = ()=>{
+    editFormOpen = false;
+    editingStudentId = null;
+    renderApp();
+  };
+
+  card.querySelector('#submitEditBtn').onclick = ()=>{
+    const nameInput = document.getElementById('editStudentName');
+    const bookSelect = document.getElementById('editStudentBookSelect');
+    const bookCustom = document.getElementById('editStudentBookCustom');
+    const startInput = document.getElementById('editStudentStart');
+    const err = document.getElementById('editErr');
+    const name = nameInput.value.trim();
+    if(!name){ err.textContent = 'Ismni kiriting.'; nameInput.focus(); return; }
+    if(editDaySelection.size === 0){ err.textContent = 'Kamida bitta kun tanlang.'; return; }
+
+    const tariffDays = TARIFFS[editSelectedTariff].days;
+    if(editDaySelection.size !== tariffDays){
+      const proceed = confirm(`Siz ${TARIFFS[editSelectedTariff].label} tarif tanladingiz, lekin ${editDaySelection.size} kun belgiladingiz. Shunday davom etamizmi?`);
+      if(!proceed) return;
+    }
+
+    const book = bookSelect.value === '__other__' ? bookCustom.value.trim() : bookSelect.value;
+    student.name = name;
+    student.book = book;
+    student.tariff = editSelectedTariff;
+    student.startDate = startInput.value || student.startDate;
+    student.days = Array.from(editDaySelection).sort();
+
+    editFormOpen = false;
+    editingStudentId = null;
+    queueSave();
+    renderApp();
+  };
+}
+
 document.getElementById('fabAdd').onclick = ()=>{
   addFormOpen = true;
   newDaySelection = new Set();
@@ -1234,13 +1479,19 @@ document.getElementById('fabAdd').onclick = ()=>{
   renderAddForm();
 };
 
-// override renderApp to respect addFormOpen
+// override renderApp to respect addFormOpen / editFormOpen
 const _origRenderApp = renderApp;
 renderApp = function(){
   if(addFormOpen){
     document.getElementById('pageTitle').textContent = 'Yangi o\'quvchi';
     document.getElementById('fabAdd').style.display = 'none';
     renderAddForm();
+    return;
+  }
+  if(editFormOpen){
+    document.getElementById('pageTitle').textContent = 'Tahrirlash';
+    document.getElementById('fabAdd').style.display = 'none';
+    renderEditForm();
     return;
   }
   _origRenderApp();
