@@ -81,6 +81,18 @@
     cursor:pointer;
     font-family:'IBM Plex Mono',monospace;
   }
+  .icon-btn{
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.15);
+    color:var(--paper);
+    border-radius:10px;
+    width:36px;height:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+  }
+  .icon-btn:active{ background:rgba(255,255,255,.16); }
 
   .card{
     background:var(--card);
@@ -88,6 +100,17 @@
     border-radius:14px;
     padding:16px;
     margin-bottom:14px;
+  }
+  .today-card{
+    border-top:3px solid var(--gold);
+    background:linear-gradient(180deg, var(--card) 0%, var(--paper) 160%);
+  }
+  .today-head{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:16px;
+    color:var(--ink);
+    margin-bottom:10px;
   }
 
   .field-label{
@@ -640,7 +663,17 @@
       <div class="eyebrow">O'quv reyestri</div>
       <h1 id="pageTitle">Dars Jadvali</h1>
     </div>
-    <button class="logout-link" id="logoutBtn">chiqish</button>
+    <div style="display:flex; gap:8px;">
+      <button class="icon-btn" id="searchBtn" title="Qidirish">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+      <button class="icon-btn" id="reportBtn" title="Hisobot">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </button>
+      <button class="icon-btn" id="logoutBtn" title="Chiqish">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
   </header>
 
   <div id="mainContent"></div>
@@ -685,6 +718,8 @@ let payments = {};
 let cycleView = {};
 let newDaySelection = new Set();
 let currentView = { type: 'list' }; // or { type:'detail', studentId }
+let studentSearchQuery = '';
+let studentSortMode = 'name';
 
 const STORAGE_KEY = 'tutoring-tracker-v1';
 
@@ -890,6 +925,19 @@ function computeBalance(student){
   const paid = (payments[student.id] || []).reduce((s,p)=> s + (Number(p.amount)||0), 0);
   return paid - expected;
 }
+function computeOverallSummary(){
+  let totalExpected = 0, totalPaid = 0, debtors = [];
+  students.forEach(student=>{
+    const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+    const cyclesElapsed = defaultCycleIndex(student.startDate) + 1;
+    const expected = cyclesElapsed * tariff.price;
+    const paid = (payments[student.id] || []).reduce((s,p)=> s + (Number(p.amount)||0), 0);
+    totalExpected += expected;
+    totalPaid += paid;
+    if(paid - expected < 0) debtors.push(student);
+  });
+  return { totalExpected, totalPaid, debtors };
+}
 function balanceClass(bal){
   if(bal > 0) return 'pos';
   if(bal < 0) return 'neg';
@@ -910,17 +958,75 @@ function monthsAheadText(student, bal){
   return '';
 }
 
+function getTodayEntries(){
+  const ds = todayStr();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekday = today.getDay();
+  const entries = [];
+  students.forEach(student=>{
+    let tag = null;
+    if(student.days.includes(weekday)){
+      tag = null;
+    } else {
+      const studentReschedule = reschedule[student.id] || {};
+      const rescheduledHere = Object.entries(studentReschedule).find(([orig,newDs])=> newDs === ds);
+      const legacyHere = (makeupDates[student.id] || []).includes(ds);
+      if(rescheduledHere){
+        tag = `${formatDayLabel(new Date(rescheduledHere[0]+'T00:00:00'))}dan ko'chirilgan`;
+      } else if(legacyHere){
+        tag = `qo'shimcha dars`;
+      } else {
+        return; // no lesson today for this student
+      }
+    }
+    entries.push({ student, ds, tag });
+  });
+  return entries;
+}
+
 // ================= Render root =================
 function renderApp(){
   if(currentView.type === 'detail'){
     document.getElementById('pageTitle').textContent = 'O\'quvchi';
     document.getElementById('fabAdd').style.display = 'none';
     renderDetail(currentView.studentId);
+  } else if(currentView.type === 'summary'){
+    document.getElementById('pageTitle').textContent = 'Hisobot';
+    document.getElementById('fabAdd').style.display = 'none';
+    renderSummaryView();
+  } else if(currentView.type === 'search'){
+    document.getElementById('pageTitle').textContent = 'Qidirish';
+    document.getElementById('fabAdd').style.display = 'none';
+    renderSearchView();
   } else {
     document.getElementById('pageTitle').textContent = 'Dars Jadvali';
     document.getElementById('fabAdd').style.display = 'block';
     renderList();
   }
+}
+
+function renderSummaryView(){
+  const container = document.getElementById('mainContent');
+  container.innerHTML = '';
+
+  const backRow = document.createElement('div');
+  backRow.innerHTML = `<button class="back-btn" id="backFromReport" style="margin-bottom:12px;">‹</button>`;
+  container.appendChild(backRow);
+  backRow.querySelector('#backFromReport').onclick = ()=>{ currentView = {type:'list'}; renderApp(); };
+
+  const summary = computeOverallSummary();
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="section-label" style="margin-top:0;">Umumiy holat</div>
+    <div class="stats-row">
+      <div class="stat"><div class="n">$${summary.totalExpected.toLocaleString('en-US')}</div><div class="l">kutilgan</div></div>
+      <div class="stat done"><div class="n">$${summary.totalPaid.toLocaleString('en-US')}</div><div class="l">yig'ilgan</div></div>
+      <div class="stat missed"><div class="n">${summary.debtors.length}</div><div class="l">qarzdor</div></div>
+    </div>
+    ${summary.debtors.length > 0 ? `<div class="err-inline" style="color:var(--rust); margin-top:2px;">Qarzdorlar: ${summary.debtors.map(s=>escapeHtml(s.name)).join(', ')}</div>` : ''}
+  `;
+  container.appendChild(card);
 }
 
 function renderList(){
@@ -931,6 +1037,56 @@ function renderList(){
     container.innerHTML = '<div class="card"><div class="empty">Hali o\'quvchi qo\'shilmagan.<br>Pastdagi "+" tugmasini bosing.</div></div>';
     return;
   }
+
+  // ---- Today section ----
+  const todayEntries = getTodayEntries();
+  const todayCard = document.createElement('div');
+  todayCard.className = 'card today-card';
+  const now = new Date();
+  const todayLabel = `${now.getDate()}-${MONTH_LOWER[now.getMonth()]}, ${DAY_FULL[now.getDay()]}`;
+  todayCard.innerHTML = `<div class="today-head">Bugun — ${todayLabel}</div>`;
+  container.appendChild(todayCard);
+
+  if(todayEntries.length === 0){
+    todayCard.innerHTML += '<div class="empty" style="padding:14px 0 4px;">Bugun rejalashtirilgan dars yo\'q.</div>';
+  } else {
+    const rowsWrap = document.createElement('div');
+    rowsWrap.className = 'day-rows';
+    todayEntries.forEach(({student, ds, tag})=>{
+      const key = `${student.id}:${ds}`;
+      const st = attendance[key];
+      const row = document.createElement('div');
+      row.className = 'day-row' + (tag ? ' makeup' : '');
+      row.innerHTML = `
+        <div class="d">${escapeHtml(student.name)}${tag ? `<small>${tag}</small>` : ''}</div>
+        <div class="status-toggle">
+          <button data-today-set="${key}" data-val="done" class="${st==='done'?'active-done':''}">Bo'ldi</button>
+          <button data-today-set="${key}" data-val="missed" class="${st==='missed'?'active-missed':''}">O'tmadi</button>
+        </div>
+      `;
+      rowsWrap.appendChild(row);
+    });
+    todayCard.appendChild(rowsWrap);
+  }
+
+  todayCard.querySelectorAll('[data-today-set]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const key = btn.getAttribute('data-today-set');
+      const val = btn.getAttribute('data-val');
+      attendance[key] = (attendance[key] === val) ? undefined : val;
+      if(attendance[key] === undefined) delete attendance[key];
+      queueSave();
+      renderApp();
+    };
+  });
+
+  // ---- All students section ----
+  const label = document.createElement('div');
+  label.className = 'section-label';
+  label.style.margin = '18px 4px 8px 4px';
+  label.textContent = "Barcha o'quvchilar";
+  container.appendChild(label);
 
   students.forEach(student=>{
     const bal = computeBalance(student);
@@ -950,6 +1106,78 @@ function renderList(){
     row.onclick = ()=>{ currentView = { type:'detail', studentId: student.id }; renderApp(); };
     container.appendChild(row);
   });
+}
+
+function renderSearchView(){
+  const container = document.getElementById('mainContent');
+  container.innerHTML = '';
+
+  const backRow = document.createElement('div');
+  backRow.innerHTML = `<button class="back-btn" id="backFromSearch" style="margin-bottom:12px;">‹</button>`;
+  container.appendChild(backRow);
+  backRow.querySelector('#backFromSearch').onclick = ()=>{ currentView = {type:'list'}; renderApp(); };
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <input type="text" id="studentSearchInput" placeholder="Ism bo'yicha qidirish..." value="${escapeHtml(studentSearchQuery)}" style="flex:2; padding:10px 12px; border-radius:9px; border:1px solid var(--paper-line); background:var(--paper); font-size:13.5px;">
+      <select id="studentSortSelect" style="flex:1; padding:10px 8px; border-radius:9px; border:1px solid var(--paper-line); background:var(--paper); font-size:12.5px;">
+        <option value="name" ${studentSortMode==='name'?'selected':''}>Ism</option>
+        <option value="debt" ${studentSortMode==='debt'?'selected':''}>Qarzi borlar</option>
+      </select>
+    </div>
+    <div id="searchResults"></div>
+  `;
+  container.appendChild(card);
+
+  function renderResults(){
+    const resultsEl = document.getElementById('searchResults');
+    let visibleStudents = students.filter(s =>
+      s.name.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    );
+    if(studentSortMode === 'name'){
+      visibleStudents = visibleStudents.slice().sort((a,b)=> a.name.localeCompare(b.name));
+    } else if(studentSortMode === 'debt'){
+      visibleStudents = visibleStudents.slice().sort((a,b)=> computeBalance(a) - computeBalance(b));
+    }
+
+    resultsEl.innerHTML = '';
+    if(visibleStudents.length === 0){
+      resultsEl.innerHTML = '<div class="empty">Hech kim topilmadi.</div>';
+      return;
+    }
+    visibleStudents.forEach(student=>{
+      const bal = computeBalance(student);
+      const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+      const row = document.createElement('div');
+      row.className = 'student-row';
+      row.innerHTML = `
+        <div class="info">
+          <div class="name">${escapeHtml(student.name)}</div>
+          <div class="meta">${tariff.label} · $${tariff.price}</div>
+        </div>
+        <div class="right">
+          <div class="balance-chip ${balanceClass(bal)}">${bal===0?'$0':(bal>0?'+':'-')+'$'+Math.abs(bal)}</div>
+          <div class="chev">›</div>
+        </div>
+      `;
+      row.onclick = ()=>{ currentView = { type:'detail', studentId: student.id }; renderApp(); };
+      resultsEl.appendChild(row);
+    });
+  }
+
+  document.getElementById('studentSearchInput').oninput = (e)=>{
+    studentSearchQuery = e.target.value;
+    renderResults();
+  };
+  document.getElementById('studentSortSelect').onchange = (e)=>{
+    studentSortMode = e.target.value;
+    renderResults();
+  };
+
+  renderResults();
+  setTimeout(()=> document.getElementById('studentSearchInput').focus(), 100);
 }
 
 function renderDetail(studentId){
@@ -1525,6 +1753,14 @@ async function tryLogin(){
   btn.textContent = 'Kirish';
 }
 
+document.getElementById('searchBtn').onclick = ()=>{
+  currentView = { type: 'search' };
+  renderApp();
+};
+document.getElementById('reportBtn').onclick = ()=>{
+  currentView = { type: 'summary' };
+  renderApp();
+};
 document.getElementById('logoutBtn').onclick = ()=>{
   if(confirm('Tizimdan chiqmoqchimisiz?')){
     clearAuthSession();
