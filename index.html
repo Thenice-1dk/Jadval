@@ -965,7 +965,7 @@ function getTodayEntries(){
   const entries = [];
   students.forEach(student=>{
     let tag = null;
-    if(student.days.includes(weekday)){
+    if(student.days.includes(weekday) && ds >= student.startDate){
       tag = null;
     } else {
       const studentReschedule = reschedule[student.id] || {};
