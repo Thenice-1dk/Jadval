@@ -123,7 +123,7 @@
   }
   .field-label:first-child{ margin-top:0; }
 
-  input[type=text], input[type=date], input[type=number], select{
+  input[type=text], input[type=date], input[type=number], input[type=time], select{
     width:100%;
     padding:10px 12px;
     border-radius:9px;
@@ -1252,6 +1252,8 @@ function renderDetail(studentId){
     </div>
     <div class="student-days">${scheduledDayLabels || 'kunlar tanlanmagan'} · ${tariff.label} ($${tariff.price})</div>
     ${student.book ? `<div class="student-book">📖 <b>Kitob:</b> ${escapeHtml(student.book)}</div>` : ''}
+    ${student.time ? `<div class="student-book" style="margin-top:-8px;">🕒 <b>Dars soati:</b> ${escapeHtml(student.time)}</div>` : ''}
+    <button type="button" data-open-card="${student.id}" style="width:100%; min-height:44px; background:var(--gold-soft); color:var(--ink); border:1px dashed var(--gold); border-radius:9px; padding:11px; font-size:13.5px; font-weight:600; cursor:pointer; margin-bottom:12px;">Jadval kartasi (rasm)</button>
 
     <div class="cycle-nav">
       <button data-cycle-prev="${student.id}">‹</button>
@@ -1427,6 +1429,9 @@ function renderDetail(studentId){
       }
     });
   });
+  card.querySelector(`[data-open-card="${student.id}"]`).onclick = ()=>{
+    openScheduleCard(student.id);
+  };
   card.querySelector(`[data-edit="${student.id}"]`).onclick = ()=>{
     editFormOpen = true;
     editingStudentId = student.id;
@@ -1512,6 +1517,9 @@ function renderAddForm(){
     <div class="field-label">Boshlagan sana</div>
     <input type="date" id="newStudentStart">
 
+    <div class="field-label">Dars soati</div>
+    <input type="time" id="newStudentTime">
+
     <div class="field-label">Haftalik kunlar</div>
     <div class="day-picker" id="newDayPicker"></div>
     <div class="err-inline" id="addErr"></div>
@@ -1566,6 +1574,7 @@ function renderAddForm(){
       book,
       tariff: selectedTariff,
       startDate: startInput.value || todayStr(),
+      time: (document.getElementById('newStudentTime').value || ''),
       days: Array.from(newDaySelection).sort()
     });
     newDaySelection = new Set();
@@ -1622,6 +1631,9 @@ function renderEditForm(){
 
     <div class="field-label">Boshlagan sana</div>
     <input type="date" id="editStudentStart" value="${student.startDate}">
+
+    <div class="field-label">Dars soati</div>
+    <input type="time" id="editStudentTime" value="${escapeHtml(student.time || '')}">
 
     <div class="field-label">Haftalik kunlar</div>
     <div class="day-picker" id="editDayPicker"></div>
@@ -1691,6 +1703,7 @@ function renderEditForm(){
     student.book = book;
     student.tariff = editSelectedTariff;
     student.startDate = startInput.value || student.startDate;
+    student.time = document.getElementById('editStudentTime').value || '';
     student.days = Array.from(editDaySelection).sort();
 
     editFormOpen = false;
@@ -1724,6 +1737,290 @@ renderApp = function(){
   }
   _origRenderApp();
 };
+
+// ================= Schedule card (shareable image) =================
+function lessonsForCycle(student, idx){
+  const { cycleStart, cycleEnd } = getCycleBounds(student.startDate, idx);
+  const moved = reschedule[student.id] || {};
+  const seen = new Set();
+  const out = [];
+  function push(d, tag){
+    const ds = toDateStr(d);
+    if(seen.has(ds)) return;
+    seen.add(ds);
+    out.push({ date: d, tag });
+  }
+  datesInRange(cycleStart, cycleEnd).forEach(dt=>{
+    if(student.days.includes(dt.getDay()) && !moved[toDateStr(dt)]) push(dt, null);
+  });
+  Object.values(moved).forEach(newDs=>{
+    const d = new Date(newDs+'T00:00:00');
+    if(d >= cycleStart && d <= cycleEnd) push(d, "ko'chirilgan");
+  });
+  (makeupDates[student.id] || []).forEach(ds=>{
+    const d = new Date(ds+'T00:00:00');
+    if(d >= cycleStart && d <= cycleEnd) push(d, "qo'shimcha");
+  });
+  out.sort((a,b)=> a.date - b.date);
+  return { lessons: out, cycleStart, cycleEnd };
+}
+
+function cardRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+
+function cardFitFont(ctx, text, maxW, startPx, minPx, weight, family){
+  let px = startPx;
+  ctx.font = `${weight} ${px}px ${family}`;
+  while(px > minPx && ctx.measureText(text).width > maxW){
+    px -= 2;
+    ctx.font = `${weight} ${px}px ${family}`;
+  }
+  return px;
+}
+
+function drawScheduleCard(student, idx){
+  const tariff = TARIFFS[student.tariff] || TARIFFS['3'];
+  const { lessons, cycleStart, cycleEnd } = lessonsForCycle(student, idx);
+
+  const SERIF = "Fraunces, Georgia, 'Times New Roman', serif";
+  const MONO = "'IBM Plex Mono', 'Courier New', monospace";
+  const W = 1080, PAD = 64, GAP = 24;
+  const colW = (W - PAD*2 - GAP) / 2;
+  const rowH = 100, rowGap = 16;
+  const headerH = 340;
+
+  const infoRows = [];
+  if(student.book) infoRows.push(['KITOB', student.book]);
+  if(student.time) infoRows.push(['DARS SOATI', student.time]);
+  infoRows.push(['JAMI DARSLAR', lessons.length + ' ta']);
+  const infoRowH = 92;
+  const infoH = infoRows.length * infoRowH + 36;
+  const listTitleH = 96;
+  const rows = Math.max(1, Math.ceil(lessons.length / 2));
+  const listH = rows * (rowH + rowGap);
+  const bottomH = 56;
+  const H = headerH + 8 + infoH + listTitleH + listH + bottomH;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // background
+  ctx.fillStyle = '#f7f2e7';
+  ctx.fillRect(0, 0, W, H);
+
+  // header
+  const g = ctx.createLinearGradient(0, 0, W, headerH);
+  g.addColorStop(0, '#26394d');
+  g.addColorStop(1, '#1c2b3a');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, headerH);
+  ctx.fillStyle = '#b8892b';
+  ctx.fillRect(0, headerH, W, 8);
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+
+  // eyebrow
+  ctx.fillStyle = '#b8892b';
+  ctx.font = `500 26px ${MONO}`;
+  if('letterSpacing' in ctx) ctx.letterSpacing = '6px';
+  ctx.fillText("DARS JADVALI", PAD, 104);
+  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+  // name
+  ctx.fillStyle = '#f7f2e7';
+  cardFitFont(ctx, student.name, W - PAD*2, 92, 44, 600, SERIF);
+  ctx.fillText(student.name, PAD, 204);
+
+  // weekdays + tariff
+  const dayNames = student.days.slice().sort().map(d=>DAY_FULL[d]).join(' · ');
+  ctx.fillStyle = '#b9c4cf';
+  cardFitFont(ctx, `${tariff.label} · ${dayNames}`, W - PAD*2, 28, 18, 400, MONO);
+  ctx.fillText(`${tariff.label} · ${dayNames}`, PAD, 258);
+
+  // cycle range
+  ctx.fillStyle = '#d9b565';
+  ctx.font = `500 30px ${MONO}`;
+  ctx.fillText(formatCycleLabel(cycleStart, cycleEnd), PAD, 306);
+
+  // info rows
+  let y = headerH + 8 + 36;
+  infoRows.forEach(([label, value])=>{
+    ctx.fillStyle = '#5c6b78';
+    ctx.font = `500 24px ${MONO}`;
+    if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, PAD, y + 52);
+    if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+    ctx.fillStyle = '#1c2b3a';
+    ctx.textAlign = 'right';
+    cardFitFont(ctx, value, W - PAD*2 - 300, 44, 24, 600, SERIF);
+    ctx.fillText(value, W - PAD, y + 54);
+
+    ctx.fillStyle = '#e3d9c4';
+    ctx.fillRect(PAD, y + infoRowH - 6, W - PAD*2, 2);
+    y += infoRowH;
+  });
+  ctx.textAlign = 'left';
+
+  // list title
+  y += 20;
+  ctx.fillStyle = '#5c6b78';
+  ctx.font = `500 24px ${MONO}`;
+  if('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  ctx.fillText("DARSLAR", PAD, y + 40);
+  if('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  y += listTitleH - 20;
+
+  if(lessons.length === 0){
+    ctx.fillStyle = '#5c6b78';
+    ctx.font = `400 32px ${SERIF}`;
+    ctx.fillText("Bu davrda dars yo'q", PAD, y + 56);
+  }
+
+  lessons.forEach((l, i)=>{
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = PAD + col * (colW + GAP);
+    const cy = y + row * (rowH + rowGap);
+    const rowHasTag = !!((lessons[row*2] && lessons[row*2].tag) || (lessons[row*2+1] && lessons[row*2+1].tag));
+    const base = cy + (rowHasTag ? 52 : 60);
+
+    cardRoundRect(ctx, x, cy, colW, rowH, 20);
+    ctx.fillStyle = '#fffdf8';
+    ctx.fill();
+    ctx.strokeStyle = '#e3d9c4';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // index
+    ctx.fillStyle = '#b8892b';
+    ctx.font = `600 26px ${MONO}`;
+    ctx.fillText(String(i + 1).padStart(2, '0'), x + 26, base);
+
+    // date
+    ctx.fillStyle = '#1c2b3a';
+    ctx.font = `600 38px ${SERIF}`;
+    ctx.fillText(`${l.date.getDate()}-${MONTH_LOWER[l.date.getMonth()]}`, x + 92, base);
+
+    // weekday
+    ctx.fillStyle = '#5c6b78';
+    ctx.font = `400 22px ${MONO}`;
+    ctx.textAlign = 'right';
+    ctx.fillText(DAY_FULL[l.date.getDay()].toLowerCase(), x + colW - 24, base);
+    ctx.textAlign = 'left';
+
+    if(l.tag){
+      ctx.fillStyle = '#b8892b';
+      ctx.font = `500 20px ${MONO}`;
+      ctx.fillText(l.tag, x + 92, cy + 82);
+    }
+  });
+
+  // bottom accent
+  ctx.fillStyle = '#b8892b';
+  ctx.fillRect(0, H - 12, W, 12);
+
+  return canvas;
+}
+
+async function openScheduleCard(studentId){
+  const student = students.find(s=>s.id===studentId);
+  if(!student) return;
+  let idx = (cycleView[studentId] !== undefined) ? cycleView[studentId] : defaultCycleIndex(student.startDate);
+
+  try{
+    if(document.fonts && document.fonts.load){
+      await Promise.all([
+        document.fonts.load("600 40px Fraunces"),
+        document.fonts.load("500 24px 'IBM Plex Mono'")
+      ]);
+    }
+  }catch(e){ /* fonts optional */ }
+
+  const old = document.getElementById('cardOverlay');
+  if(old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'cardOverlay';
+  overlay.style.cssText = 'position:fixed; inset:0; background:rgba(10,18,26,.85); z-index:10000; overflow-y:auto; padding:16px; display:flex; justify-content:center;';
+  overlay.innerHTML = `
+    <div style="width:100%; max-width:440px; margin:auto 0;">
+      <div class="cycle-nav" style="background:var(--card); margin:0 0 12px 0;">
+        <button type="button" id="cardPrev">‹</button>
+        <div class="cycle-label" id="cardLabel"></div>
+        <button type="button" id="cardNext">›</button>
+      </div>
+      <div id="cardCanvasWrap" style="border-radius:14px; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,.45);"></div>
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <button type="button" class="primary-btn" id="cardShare" style="margin-top:0; flex:2; min-height:46px; background:var(--gold); color:#fff;">Rasm sifatida yuborish</button>
+        <button type="button" class="primary-btn" id="cardDownload" style="margin-top:0; flex:1; min-height:46px;">Saqlash</button>
+      </div>
+      <button type="button" class="primary-btn" id="cardClose" style="min-height:46px; background:var(--paper); color:var(--ink); margin-top:8px; margin-bottom:8px;">Yopish</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const wrap = overlay.querySelector('#cardCanvasWrap');
+  const label = overlay.querySelector('#cardLabel');
+  let currentBlob = null;
+
+  function refresh(){
+    const canvas = drawScheduleCard(student, idx);
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+    canvas.style.display = 'block';
+    wrap.innerHTML = '';
+    wrap.appendChild(canvas);
+    const { cycleStart, cycleEnd } = getCycleBounds(student.startDate, idx);
+    label.textContent = formatCycleLabel(cycleStart, cycleEnd);
+    currentBlob = null;
+    canvas.toBlob(b=>{ currentBlob = b; }, 'image/png');
+  }
+  refresh();
+
+  function fileName(){
+    const safe = student.name.replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '') || 'oquvchi';
+    return `jadval-${safe}.png`;
+  }
+  function download(blob){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=> URL.revokeObjectURL(url), 2000);
+  }
+
+  overlay.querySelector('#cardPrev').onclick = ()=>{ idx -= 1; refresh(); };
+  overlay.querySelector('#cardNext').onclick = ()=>{ idx += 1; refresh(); };
+  overlay.querySelector('#cardClose').onclick = ()=> overlay.remove();
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.remove(); });
+
+  overlay.querySelector('#cardDownload').onclick = ()=>{
+    if(currentBlob) download(currentBlob);
+  };
+  overlay.querySelector('#cardShare').onclick = async ()=>{
+    if(!currentBlob) return;
+    const file = new File([currentBlob], fileName(), { type: 'image/png' });
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{ await navigator.share({ files: [file], title: 'Dars jadvali' }); }
+      catch(e){ /* user cancelled */ }
+    } else {
+      download(currentBlob);
+    }
+  };
+}
 
 // ================= Auth =================
 loadAuthSession();
